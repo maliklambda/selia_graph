@@ -1,17 +1,19 @@
 mod db;
 mod io;
 mod objects;
+mod constants;
 
 
 use std::{sync::{Arc, RwLock}, thread};
 use io::read::read_vertex_locked;
-use crate::{db::db::{DBInner, DB}, io::{read::read_relationship_locked, write::{write_relationship_locked, write_vertex_locked}}, objects::{relationship::Relationship, vertex::{self, Vertex}}};
+use crate::{db::db::{DBInner, GraphDB, DB}, io::{read::read_relationship_locked, write::{write_relationship_locked, write_vertex_locked}}, objects::{relationship::Relationship, vertex::{self, Vertex}}};
 use crate::objects::iterator::RelationshipIterator;
 
 
 fn main() {
     let f_vert_path = "./out_files/vertices.db";
     let f_rel_path = "./out_files/relationships.db";
+    let graphDB = GraphDB::new(dbName, )
     let db = DB::new(RwLock::new(DBInner::new(f_rel_path, f_vert_path).expect("Fatal: failed DB-initialization")));
 
     let mut handles = Vec::new();

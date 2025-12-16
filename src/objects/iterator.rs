@@ -1,4 +1,10 @@
-use crate::{db::db::{DB, lock_db_handle_mut}, objects::relationship::{Relationship, RelationshipId}};
+use crate::{
+    db::db::{lock_db_handle_mut, DB}, 
+    objects::{
+        relationship::{Relationship, RelationshipId}, 
+        vertex::{Vertex, VertexId},
+    }
+};
 
 
 
@@ -23,14 +29,14 @@ impl <'a> RelationshipIterator <'a> {
         }
     }
 
-    pub fn depth_first_search (&mut self, db_handle: &'a mut DB, start_rel: Relationship) {
-        
-    }
+    // pub fn depth_first_search (&mut self, db_handle: &'a mut DB, start_rel: Relationship) {
+    //
+    // }
 
 
-    pub fn breadth_first_search (&mut self, db_handle: &'a mut DB, start_rel: Relationship) {
-        
-    }
+    // pub fn breadth_first_search (&mut self, db_handle: &'a mut DB, start_rel: Relationship) {
+    //
+    // }
 }
 
 
@@ -58,6 +64,30 @@ impl Iterator for RelationshipIterator <'_> {
     }
 }
 
+impl DoubleEndedIterator for RelationshipIterator <'_> {
+    fn next_back (&mut self) -> Option<Self::Item>{
+        let mut db_lock = lock_db_handle_mut(self.db_handle)?;
+
+        if self.start_rel_id.is_none(){
+            self.start_rel_id = Some(self.next_rel_id)
+        } else if self.next_rel_id == self.start_rel_id.unwrap() {
+            return None;
+        }
+        match db_lock.f_rel.read_relationship(self.next_rel_id) {
+            Some(_next_rel) => {
+                todo!("change the line below to make use of the correct next_rel_id");
+                // self.next_rel_id = next_rel.rel.vertex_refs.start_prev; // change here
+                // Some(next_rel)
+            }
+            None => {
+                println!("Finished iteration");
+                None
+            }
+        }
+    }
+
+}
+
 
 pub enum IterDirection {
     Forward,
@@ -65,5 +95,22 @@ pub enum IterDirection {
 }
 
 
+
+
+
+pub struct NodeIterator <'a> {
+    pub db_handle: &'a mut DB,
+    pub start_node_id: Option<VertexId>, 
+    pub next_node: VertexId,
+    pub direction: IterDirection, 
+}
+
+impl Iterator for NodeIterator <'_> {
+    type Item = Vertex;
+
+    fn next (&mut self) -> Option<Vertex> {
+        None
+    }
+}
 
 

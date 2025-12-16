@@ -19,3 +19,7 @@ impl Property {
 
 
 
+pub struct PropertyFile {
+    pub file: std::fs::File,
+    pub start_properties: usize,
+}

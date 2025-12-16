@@ -1,10 +1,9 @@
 use std::{
-    slice,
     fs::{
-        OpenOptions,
-        File
-    },
+        File, OpenOptions
+    }, path::{Path, PathBuf}, slice
 };
+use crate::constants::lengths::{VERTEX_BYTE_LENGTH, START_VERTICES};
 
 use crate::objects::{
     objects::*,
@@ -14,9 +13,6 @@ use crate::objects::{
 
 
 pub type VertexId = ID;
-
-pub const VERTEX_BYTE_LENGTH: usize = 9;
-pub const START_VERTICES: usize = 0;
 
 
 #[derive(Debug, Copy, Clone)]
@@ -194,23 +190,25 @@ pub enum VertexCreationFailure {
 #[derive(Debug)]
 pub struct VertexFile {
     pub file: std::fs::File,
+    pub file_path: PathBuf,
     pub start_vertices: usize,
     pub last_id: VertexId
 }
 
 
 impl VertexFile {
-    pub fn new (filename: &str) -> Result<Self, std::io::Error> {
+    pub fn new (file_path: &Path) -> Result<Self, std::io::Error> {
         println!("Initialization of vertex file goes here");
         let cur_dir = std::env::current_dir()?;
         println!("Current dir: {}", cur_dir.display());
-        if !std::path::Path::new(filename).exists() { let _ = File::create(filename)?; }
+        // if !file_path.exists() { let _ = File::create(file_path)?; }
         let file = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(filename)?;
+            .open(file_path)?;
         Ok(VertexFile { 
             file, 
+            file_path: file_path.to_path_buf(),
             start_vertices: START_VERTICES, 
             last_id: 0 
         })

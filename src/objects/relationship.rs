@@ -1,6 +1,8 @@
 use std::io::{Read, Seek};
 use std::slice;
 use std::fs::{OpenOptions, File};
+use std::path::{Path, PathBuf};
+use crate::constants::lengths::{START_RELATIONSHIPS, RELATIONSHIP_BYTE_LENGTH}
 
 use crate::objects::{
     objects::*, property::PropertyId, vertex::{Vertex, VertexId}
@@ -8,9 +10,6 @@ use crate::objects::{
 
 pub type RelationshipId = ID;
 pub type RelationshipType = u32;
-
-pub const RELATIONSHIP_BYTE_LENGTH: usize = 33;
-pub const START_RELATIONSHIPS: usize = 0;
 
 
 #[derive(Debug)]
@@ -213,24 +212,26 @@ impl RelationshipVertexRefs {
 #[derive(Debug)]
 pub struct RelationshipFile {
     pub file: std::fs::File,
+    pub file_path: PathBuf,
     pub start_relationships: usize,
     buffer: [u8; RELATIONSHIP_BYTE_LENGTH],
 }
 
 
 impl RelationshipFile {
-    pub fn new (filename: &str) -> Result<Self, std::io::Error> {
+    pub fn new (file_path: &Path) -> Result<Self, std::io::Error> {
         println!("Initialization of relationship file goes here");
         let cur_dir = std::env::current_dir()?;
         println!("Current dir: {}", cur_dir.display());
-        println!("Expected filepath: {}", filename);
-        if !std::path::Path::new(filename).exists() { let _ = File::create(filename)?; }
+        println!("Expected filepath: {:?}", file_path);
+        // if !file_path.exists() { let _ = File::create(file_path)?; }
         let file = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(filename)?;
+            .open(file_path)?;
         Ok(RelationshipFile { 
-            file, 
+            file,
+            file_path: file_path.to_path_buf(),
             start_relationships: START_RELATIONSHIPS, 
             buffer: [0u8; RELATIONSHIP_BYTE_LENGTH],
         })
