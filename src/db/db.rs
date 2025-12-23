@@ -19,45 +19,47 @@ impl GraphDB {
     pub fn new (db_name: &str, version: Version) -> Result<Self, String> {
         let path = &db_root_path(db_name);
         if path.exists() {
-            println!("Path {:?} exists.", path);
             println!("Initializing GraphDB ({db_name}) from file");
-            return Ok(Self::init_from_file(path)
-                .expect(&format!("Fatal: Failed to init DB ({db_name} from file.)"))
+            return Ok(Self::init_from_file(db_name, version)
+                .unwrap_or_else(|_| panic!("Fatal: Failed to init DB ({db_name} from file.)"))
             );
         }
         println!("Did not find {db_name} directory. Initializing Graph DB ({db_name}) from scratch");
         Ok(Self::init_from_scratch(db_name, version)
-            .expect(&format!("Fatal: Failed to init DB ({db_name}) from scratch."))
+            .unwrap_or_else(|_| panic!("Fatal: Failed to init DB ({db_name} from scratch.)"))
         )
     }
 
 
     fn init_from_scratch (db_name: &str, version: Version) -> Result<Self, std::io::Error> {
         let root_path = db_root_path(db_name);
-        println!("{:?}", root_path);
         fs::create_dir(&root_path)
-            .expect(&format!("IO error: could not make root dir for db {db_name}"));
+            .unwrap_or_else(|_| panic!("IO error: could not make root dir for db {db_name}"));
         // DB config file
-        println!("this worked");
         let config = ConfigHandle::new(db_name, version)?;
-        println!("config created");
 
         // vertex files
-        todo!("touch vertex files");
+        let mut v_path = root_path.clone();
+        v_path.push(VERTEX_FILE_NAME);
+        fs::File::create(&v_path).unwrap();
 
         // relationship files
-        todo!("touch relationship files");
+        let mut r_path = root_path.clone();
+        r_path.push(RELATIONSHIP_FILE_NAME);
+        fs::File::create(&r_path).unwrap();
 
         // property files
-        todo!("touch property files");
+        // todo!("touch property files");
 
-        // others (caching, transactions, tmp, ...)
-        todo!("touch other files");
+        // index files
+        // todo!("touch index files");
+        
+        // others (caching, transactions, tmp, types ...)
+        // todo!("touch other files");
 
-        let f_rel_path = Path::new("relationship.db");
-        let f_vert_path = Path::new("vertices.db");
-        let db = DB::new(RwLock::new(DBInner::new(f_rel_path, f_vert_path)
+        let db = DB::new(RwLock::new(DBInner::new(&r_path, &v_path)
             .expect("Fatal: failed DB_Inner-initialization")));
+        println!("Finished DB initialization from scratch");
         Ok(GraphDB {
             db,
             name: db_name.to_string(),
@@ -66,8 +68,37 @@ impl GraphDB {
     }
 
 
-    fn init_from_file (_db_root_path: &Path) -> Result<Self, String> {
-        todo!("Initialize db from files");
+    fn init_from_file (db_name: &str, version: Version) -> Result<Self, String> {
+        let config = ConfigHandle::new(db_name, version).unwrap();
+
+        let root_path = db_root_path(db_name);
+        if !root_path.exists() {
+            return Err(format!("Root path ({db_name}/) does not exist"));
+        }
+
+        // vertex files
+        let mut v_path = root_path.clone();
+        v_path.push(VERTEX_FILE_NAME);
+        if !v_path.exists() {
+            return Err(format!("Vertex file ({:?}) does not exist", v_path));
+        }
+
+        // relationship files
+        let mut r_path = root_path.clone();
+        r_path.push(RELATIONSHIP_FILE_NAME);
+        if !r_path.exists() {
+            return Err(format!("Relationship file ({:?}) does not exist", r_path));
+        }
+
+
+        let db = DB::new(RwLock::new(DBInner::new(&r_path, &v_path)
+            .expect("Fatal: failed DB_Inner-initialization")));
+        println!("Finished DB initialization from files");
+        Ok(GraphDB {
+            db,
+            name: db_name.to_string(),
+            config,
+        })
     }
 
 
@@ -115,7 +146,6 @@ impl ConfigHandle {
             println!("Creating empty config file");
             fs::File::create(&config_path).unwrap();
         }
-        println!("{:?}", config_path);
         let file_metadta = fs::metadata(&config_path).unwrap();
         let size = file_metadta.len();
         if size > MAX_CONFIG_FILE_SIZE.into() {
@@ -143,7 +173,7 @@ impl ConfigHandle {
         })
     }
 
-    pub fn from_file (path: &Path) -> Self {
+    pub fn from_file (path: &Path) -> Result<Self, String> {
         todo!("Return config handle from existing config file");
     }
 
@@ -162,6 +192,7 @@ impl Config {
     pub fn default () -> Self {
         Config { version: Version { major: 0, minor: 0 } }
     }
+
 }
 
 

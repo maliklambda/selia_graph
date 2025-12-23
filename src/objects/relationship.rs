@@ -163,11 +163,6 @@ pub struct RelationshipFile {
 
 impl RelationshipFile {
     pub fn new (file_path: &Path) -> Result<Self, std::io::Error> {
-        println!("Initialization of relationship file goes here");
-        let cur_dir = std::env::current_dir()?;
-        println!("Current dir: {}", cur_dir.display());
-        println!("Expected filepath: {:?}", file_path);
-        // if !file_path.exists() { let _ = File::create(file_path)?; }
         let file = OpenOptions::new()
             .read(true)
             .write(true)

@@ -24,31 +24,41 @@ fn main() {
     for _ in 0..2 {
         let mut db_handle = Arc::clone(&db);
         let handle = thread::spawn(move || {
-            println!("Reading from db_handle");
-            let v = Vertex::new((START_VERTICES + VERTEX_BYTE_LENGTH) as u32, vertex::FileVertex { first_rel: 0, first_prop: 3, in_usage: true });
-            write_vertex_locked(&mut db_handle, v).unwrap();
-            let _v = read_vertex_locked(&db_handle, 0).unwrap();
-
-            let mut r = Relationship::default();
-            r.id = 0;
-            r.rel.vertex_refs.start_next = 33;
-            write_relationship_locked(&mut db_handle, r).unwrap();
+            // println!("Reading from db_handle");
+            // let v = Vertex::new((START_VERTICES + VERTEX_BYTE_LENGTH) as u32, vertex::FileVertex { first_rel: 0, first_prop: 3, in_usage: true });
+            // write_vertex_locked(&mut db_handle, v).unwrap();
+            // let _v = read_vertex_locked(&db_handle, 0).unwrap();
+            //
+            // let mut r = Relationship::default();
+            // r.id = 0;
+            // r.rel.vertex_refs.start_next = 33;
+            // write_relationship_locked(&mut db_handle, r).unwrap();
+            // let r = read_relationship_locked(&db_handle, 0).unwrap();
+            //
+            // let mut r2 = Relationship::default();
+            // r2.id = 33;
+            // r2.rel.vertex_refs.start_prev = 200;
+            // r2.rel.vertex_refs.start_next  = 66;
+            // write_relationship_locked(&mut db_handle, r2).unwrap();
+            // let mut r3 = Relationship::default();
+            // r3.id = 66;
+            // r3.rel.vertex_refs.start_prev = 300;
+            // write_relationship_locked(&mut db_handle, r3).unwrap();
+            // println!("\n\n\n");
+            //
             let r = read_relationship_locked(&db_handle, 0).unwrap();
-
-            let mut r2 = Relationship::default();
-            r2.id = 33;
-            r2.rel.vertex_refs.start_prev = 200;
-            r2.rel.vertex_refs.start_next  = 66;
-            write_relationship_locked(&mut db_handle, r2).unwrap();
-            let mut r3 = Relationship::default();
-            r3.id = 66;
-            r3.rel.vertex_refs.start_prev = 300;
-            write_relationship_locked(&mut db_handle, r3).unwrap();
-            println!("\n\n\n");
-
             let rel_iterator = RelationshipIterator::new(&mut db_handle, true, r);
             let filtered: Vec<_> = rel_iterator.into_iter().filter(|r| r.rel.vertex_refs.start_prev >= 200).collect();
+            println!("\n\n\n");
             println!("filtered = {:?}", filtered);
+            println!("filtered length = {:?}", filtered.len());
+
+            let r = read_relationship_locked(&db_handle, 0).unwrap();
+            let rel_iterator = RelationshipIterator::new(&mut db_handle, true, r);
+            let filtered: Vec<_> = rel_iterator.into_iter().filter(|_| true).collect();
+            println!("\n\n\n");
+            println!("filtered = {:?}", filtered);
+            println!("filtered length = {:?}", filtered.len());
             // let mut count = 0;
             // println!("\n\n\nStarting iteration");
             // for rel in rel_iterator {

@@ -20,24 +20,21 @@ pub mod limits {
 pub mod paths {
     use std::path::PathBuf;
     use std::env;
-    pub const DEFAULT_EXTENSION: &str = ".db";
     pub const DB_ROOT_DIR: &str = ".";
     pub const DB_ROOT_NAME_SUFFIX: &str = "_DB";
-    pub const CONFIG_FILE_NAME: &str = "config";
+    pub const CONFIG_FILE_NAME: &str = "config.db";
+    pub const VERTEX_FILE_NAME: &str = "vertex.db";
+    pub const RELATIONSHIP_FILE_NAME: &str = "relationship.db";
 
     pub fn db_root_path (db_name: &str) -> PathBuf {
         let mut path = env::current_dir().expect("Failed to get current dir for db_root_path");
         path.push(format!("{db_name}{DB_ROOT_NAME_SUFFIX}"));
-        PathBuf::from(path)
-    }
-
-    fn config_file_full () -> String {
-        format!("{CONFIG_FILE_NAME}{DEFAULT_EXTENSION}")
+        path
     }
 
     pub fn config_path (db_name: &str) -> PathBuf {
         let mut path = db_root_path(db_name);
-        path.push(config_file_full());
+        path.push(CONFIG_FILE_NAME);
         path
     }
 }

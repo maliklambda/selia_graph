@@ -125,9 +125,6 @@ pub struct VertexFile {
 
 impl VertexFile {
     pub fn new (file_path: &Path) -> Result<Self, std::io::Error> {
-        println!("Initialization of vertex file goes here");
-        let cur_dir = std::env::current_dir()?;
-        println!("Current dir: {}", cur_dir.display());
         // if !file_path.exists() { let _ = File::create(file_path)?; }
         let file = OpenOptions::new()
             .read(true)
