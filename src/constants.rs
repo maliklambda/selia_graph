@@ -13,7 +13,7 @@ pub mod lengths {
 
 
 pub mod limits {
-    pub const MAX_CONFIG_FILE_LENGTH: u16 = 1000;
+    pub const MAX_CONFIG_FILE_SIZE: u16 = 1000;
 
 }
 
@@ -29,6 +29,16 @@ pub mod paths {
         let mut path = env::current_dir().expect("Failed to get current dir for db_root_path");
         path.push(format!("{db_name}{DB_ROOT_NAME_SUFFIX}"));
         PathBuf::from(path)
+    }
+
+    fn config_file_full () -> String {
+        format!("{CONFIG_FILE_NAME}{DEFAULT_EXTENSION}")
+    }
+
+    pub fn config_path (db_name: &str) -> PathBuf {
+        let mut path = db_root_path(db_name);
+        path.push(config_file_full());
+        path
     }
 }
 

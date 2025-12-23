@@ -1,5 +1,12 @@
 use std::io::Write;
-use crate::db::db::{DB, lock_db_handle_mut};
+use crate::errors::{
+    RelationshipCreationFailure,
+    RelationshipCreationError,
+    VertexCreationFailure,
+    VertexCreationError
+};
+use crate::types::DB;
+use crate::db::db::lock_db_handle_mut;
 
 use crate::objects::{
     objects::Object, relationship::*, vertex::*

@@ -2,26 +2,30 @@ mod db;
 mod io;
 mod objects;
 mod constants;
+mod errors;
+mod types;
 
 
-use std::{sync::{Arc, RwLock}, thread};
+use std::{sync::{Arc}, thread};
 use io::read::read_vertex_locked;
-use crate::{db::db::{DBInner, GraphDB, DB}, io::{read::read_relationship_locked, write::{write_relationship_locked, write_vertex_locked}}, objects::{relationship::Relationship, vertex::{self, Vertex}}};
+use crate::{db::db::{GraphDB, Version}, io::{read::read_relationship_locked, write::{write_relationship_locked, write_vertex_locked}}, objects::{relationship::Relationship, vertex::{self, Vertex}}};
 use crate::objects::iterator::RelationshipIterator;
+use crate::constants::{lengths::*};
 
 
 fn main() {
-    let f_vert_path = "./out_files/vertices.db";
-    let f_rel_path = "./out_files/relationships.db";
-    let graphDB = GraphDB::new(dbName, )
-    let db = DB::new(RwLock::new(DBInner::new(f_rel_path, f_vert_path).expect("Fatal: failed DB-initialization")));
+    let db_name = "test";
+    let version = Version::new(0, 0);
+    let graph_db = GraphDB::new(db_name, version).unwrap();
+    let db = graph_db.db;
+    // let db = DB::new(RwLock::new(DBInner::new(f_rel_path, f_vert_path).expect("Fatal: failed DB-initialization")));
 
     let mut handles = Vec::new();
     for _ in 0..2 {
         let mut db_handle = Arc::clone(&db);
         let handle = thread::spawn(move || {
             println!("Reading from db_handle");
-            let v = Vertex::new((vertex::START_VERTICES + vertex::VERTEX_BYTE_LENGTH) as u32, vertex::FileVertex { first_rel: 0, first_prop: 3, in_usage: true });
+            let v = Vertex::new((START_VERTICES + VERTEX_BYTE_LENGTH) as u32, vertex::FileVertex { first_rel: 0, first_prop: 3, in_usage: true });
             write_vertex_locked(&mut db_handle, v).unwrap();
             let _v = read_vertex_locked(&db_handle, 0).unwrap();
 
@@ -43,7 +47,7 @@ fn main() {
             println!("\n\n\n");
 
             let rel_iterator = RelationshipIterator::new(&mut db_handle, true, r);
-            let filtered: Vec<_> = rel_iterator.into_iter().filter(|x| x.rel.vertex_refs.start_prev >= 200).collect();
+            let filtered: Vec<_> = rel_iterator.into_iter().filter(|r| r.rel.vertex_refs.start_prev >= 200).collect();
             println!("filtered = {:?}", filtered);
             // let mut count = 0;
             // println!("\n\n\nStarting iteration");

@@ -1,15 +1,22 @@
 use std::io::{Read, Seek};
 use std::slice;
-use std::fs::{OpenOptions, File};
+use std::fs::{OpenOptions};
 use std::path::{Path, PathBuf};
-use crate::constants::lengths::{START_RELATIONSHIPS, RELATIONSHIP_BYTE_LENGTH}
+use crate::constants::lengths::{START_RELATIONSHIPS, RELATIONSHIP_BYTE_LENGTH};
+use crate::types::{
+    RelationshipType,
+    RelationshipId,
+    VertexId,
+
+
+};
+use crate::errors::*;
 
 use crate::objects::{
-    objects::*, property::PropertyId, vertex::{Vertex, VertexId}
+    property::PropertyId, 
+    vertex::{Vertex},
+    objects::Object
 };
-
-pub type RelationshipId = ID;
-pub type RelationshipType = u32;
 
 
 #[derive(Debug)]
@@ -120,70 +127,6 @@ impl Object for FileRelationship {
 }
 
 
-#[derive(Debug)]
-pub struct RelationshipCreationError {
-    message: String,
-    reason: RelationshipCreationFailure,
-}
-
-impl RelationshipCreationError {
-    pub fn new (msg: &str, reason: RelationshipCreationFailure) -> Self {
-        RelationshipCreationError { message: msg.to_string(), reason }
-    }
-}
-
-impl std::fmt::Display for RelationshipCreationError {
-    fn fmt (&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Relation-Creation failed: {}", self.message)
-    }
-}
-
-impl std::error::Error for RelationshipCreationError {}
-
-impl From<std::io::Error> for RelationshipCreationError {
-    fn from(e: std::io::Error) -> Self {
-        RelationshipCreationError { 
-            message: e.to_string(),
-            reason: RelationshipCreationFailure::IoFailure
-        }
-    }
-}
-
-impl CreationError for RelationshipCreationError {
-    fn message (&self) -> &str {
-        &self.message
-    }
-
-    fn reason (&self) -> CreationFailureReason {
-        CreationFailureReason::RelationshipCreationFailure(self.reason.clone())
-    }
-}
-
-impl From<Box<dyn CreationError>> for RelationshipCreationError {
-    fn from(b: Box<(dyn CreationError + 'static)>) -> Self {
-        RelationshipCreationError::new(b.message(), b.reason().into())
-    }
-}
-
-
-impl From<CreationFailureReason> for RelationshipCreationFailure {
-    fn from (c: CreationFailureReason) -> Self {
-        match c {
-            CreationFailureReason::RelationshipCreationFailure(reason) => reason,
-            _ => RelationshipCreationFailure::Other
-        }
-    }
-}
-
-
-
-#[derive(Debug, Clone)]
-pub enum RelationshipCreationFailure {
-    WrongByteLength,
-    IoFailure,
-    DbLock,
-    Other,
-}
 
 
 

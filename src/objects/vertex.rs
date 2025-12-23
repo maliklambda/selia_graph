@@ -1,18 +1,18 @@
 use std::{
     fs::{
-        File, OpenOptions
+        OpenOptions
     }, path::{Path, PathBuf}, slice
 };
 use crate::constants::lengths::{VERTEX_BYTE_LENGTH, START_VERTICES};
+use crate::errors::*;
+use crate::types::*;
+use crate::objects::objects::Object;
 
 use crate::objects::{
-    objects::*,
-    relationship::RelationshipId,
     property::PropertyId,
 };
 
 
-pub type VertexId = ID;
 
 
 #[derive(Debug, Copy, Clone)]
@@ -112,79 +112,6 @@ impl Object for FileVertex {
     }
 
 }
-
-
-
-
-
-
-
-
-#[derive(Debug)]
-pub struct VertexCreationError {
-    message: String,
-    reason: VertexCreationFailure,
-}
-
-impl VertexCreationError {
-    pub fn new (msg: &str, reason: VertexCreationFailure) -> Self {
-        VertexCreationError { message: msg.to_string(), reason }
-    }
-}
-
-impl std::fmt::Display for VertexCreationError {
-    fn fmt (&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Vertex-Creation failed: {}", self.message)
-    }
-}
-
-impl std::error::Error for VertexCreationError{}
-
-impl From<std::io::Error> for VertexCreationError {
-    fn from(e: std::io::Error) -> Self {
-        VertexCreationError { 
-            message: e.to_string(),
-            reason: VertexCreationFailure::IoFailure
-        }
-    }
-}
-
-impl CreationError for VertexCreationError {
-    fn message (&self) -> &str {
-        &self.message
-    }
-
-    fn reason (&self) -> CreationFailureReason {
-        CreationFailureReason::VertexCreationFailure(self.reason)
-    }
-}
-
-impl From<Box<dyn CreationError>> for VertexCreationError {
-    fn from(b: Box<(dyn CreationError + 'static)>) -> Self {
-        VertexCreationError::new(b.message(), b.reason().into())
-    }
-}
-
-
-impl From<CreationFailureReason> for VertexCreationFailure {
-    fn from (c: CreationFailureReason) -> Self {
-        match c {
-            CreationFailureReason::VertexCreationFailure(reason) => reason,
-            _ => VertexCreationFailure::Other
-        }
-    }
-}
-
-
-#[derive(Debug, Copy, Clone)]
-pub enum VertexCreationFailure {
-    WrongByteLength,
-    IoFailure,
-    DbLock,
-    Other,
-}
-
-
 
 
 #[derive(Debug)]

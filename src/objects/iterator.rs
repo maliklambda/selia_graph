@@ -1,11 +1,15 @@
 use crate::{
-    db::db::{lock_db_handle_mut, DB}, 
+    types::{
+        RelationshipId,
+        VertexId,
+        DB
+    },
     objects::{
-        relationship::{Relationship, RelationshipId}, 
-        vertex::{Vertex, VertexId},
-    }
+        relationship::Relationship,
+        vertex::Vertex,
+    },
+    db::db::lock_db_handle_mut
 };
-
 
 
 pub struct RelationshipIterator <'a> {

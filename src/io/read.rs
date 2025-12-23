@@ -1,13 +1,24 @@
 use std::os::unix::fs::FileExt;
 use crate::{
     db::db::{
-        DB,
         lock_db_handle
     }, 
     objects::{
         objects::Object, relationship::*, vertex::*
-    }
+    },
+    types::{
+        DB,
+        VertexId,
+        RelationshipId
+    },
+    errors::{
+        VertexCreationError,
+        VertexCreationFailure,
+        RelationshipCreationError,
+        RelationshipCreationFailure
+    },
 };
+use crate::{RELATIONSHIP_BYTE_LENGTH, VERTEX_BYTE_LENGTH};
 
 
 

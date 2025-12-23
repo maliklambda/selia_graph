@@ -1,4 +1,4 @@
-use crate::objects::objects::ID;
+use crate::types::ID;
 
 
 pub type PropertyId = ID;
