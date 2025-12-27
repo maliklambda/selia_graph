@@ -85,7 +85,13 @@ pub fn get_neighboring_ids (db_handle: &DB, node_id: VertexId) -> Vec<VertexId> 
     let node = get_node(db_handle, node_id).unwrap();
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
     let rel_iterator = RelationshipIterator::new(db_handle, first_rel, node_id);
-    rel_iterator.into_iter().map(|r| (r.rel.vertex_refs.start_vertex, r.rel.vertex_refs.end_vertex)).flat_map(|(a, b)| [a, b]).collect()
+    rel_iterator.into_iter().map(|r| {
+        if r.rel.vertex_refs.start_vertex == node_id {
+            r.rel.vertex_refs.end_vertex
+        } else {
+            r.rel.vertex_refs.start_vertex
+        }
+    }).collect()
 }
 
 
