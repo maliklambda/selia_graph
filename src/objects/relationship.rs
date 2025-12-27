@@ -4,9 +4,7 @@ use std::fs::{OpenOptions};
 use std::path::{Path, PathBuf};
 use crate::constants::lengths::{START_RELATIONSHIPS, RELATIONSHIP_BYTE_LENGTH};
 use crate::types::{
-    RelationshipType,
-    RelationshipId,
-    VertexId,
+    RelationshipId, RelationshipType, VertexId, DB
 
 
 };
@@ -28,15 +26,23 @@ pub struct Relationship {
 
 impl Relationship {
     // fn new takes ownership of multiple vertices to ensure that their vertex_id is valid
-    pub fn new (id: RelationshipId, start_vertex: Vertex, end_vertex: Vertex, rel_type: u32, first_prop: PropertyId) -> Self {
-        // let vertex_refs = RelationshipVertexRefs::from_vertex_pair(start_vertex, end_vertex);
-        let vertex_refs = RelationshipVertexRefs { start_vertex: 0, end_vertex: 0, start_prev: 0, start_next: 0, end_prev: 0, end_next: 0 };
+    pub fn new (db_handle: &DB, id: RelationshipId, start_vertex: Vertex, end_vertex: Vertex, rel_type: u32, first_prop: PropertyId) -> Option<Self> {
+        let vertex_refs = RelationshipVertexRefs::from_vertex_pair(db_handle, start_vertex, end_vertex);
+        if end_vertex.id == start_vertex.id {
+            return None;
+        }
+        let vertex_refs = RelationshipVertexRefs { start_vertex: start_vertex.id, end_vertex: end_vertex.id, start_prev: 0, start_next: 0, end_prev: 0, end_next: 0 };
         let file_rel = FileRelationship::new(first_prop, rel_type, true, vertex_refs);
-        Relationship { id, rel: file_rel }
+        Some(Relationship { id, rel: file_rel })
     }
 
     pub fn default() -> Self {
-        Relationship::new(0, Vertex::default(), Vertex::default(), 0, 0)
+        Relationship { id: 0, rel: FileRelationship { 
+            vertex_refs: RelationshipVertexRefs { 
+                start_vertex: 0, end_vertex: 0, start_prev: 0, start_next: 0, end_prev: 0, end_next: 0
+            }, 
+            first_prop: 0, rel_type: 0, in_usage: true }
+        }
     }
 
     pub fn from_file_relationship (file_rel: &FileRelationship, id: RelationshipId) -> Self {
@@ -145,10 +151,12 @@ impl RelationshipVertexRefs {
         RelationshipVertexRefs { start_vertex: sv, end_vertex: ev, start_prev: sp, start_next: sn, end_prev: ep, end_next: en }
     }
 
-    // pub fn from_vertex_pair (start_vertex: Vertex, end_vertex: Vertex) -> Self {
-    //     let (start_prev, start_next) = start_vertex.get_prev_next();
-    //
-    // }
+    pub fn from_vertex_pair (db_handle: &DB, start_vertex: Vertex, end_vertex: Vertex) -> Self {
+        let (start_prev, start_next) = start_vertex.get_prev_next(db_handle).unwrap();
+        let (end_prev, end_next) = end_vertex.get_prev_next(db_handle).unwrap();
+        todo!("Update existing prev and existing next for both start and end");
+
+    }
 }
 
 
@@ -157,6 +165,7 @@ pub struct RelationshipFile {
     pub file: std::fs::File,
     pub file_path: PathBuf,
     pub start_relationships: usize,
+    pub first_available_id: RelationshipId,
     buffer: [u8; RELATIONSHIP_BYTE_LENGTH],
 }
 
@@ -171,6 +180,7 @@ impl RelationshipFile {
             file,
             file_path: file_path.to_path_buf(),
             start_relationships: START_RELATIONSHIPS, 
+            first_available_id: 0,
             buffer: [0u8; RELATIONSHIP_BYTE_LENGTH],
         })
     }

@@ -1,4 +1,4 @@
-use crate::objects::{objects::Object, relationship::RelationshipFile, vertex::{Vertex, VertexFile}};
+use crate::objects::{objects::Object, property::PropertyFile, relationship::RelationshipFile, vertex::{Vertex, VertexFile}};
 use crate::constants::{paths::*, lengths::*, limits::*};
 use crate::types::*;
 use crate::errors::*;
@@ -49,7 +49,9 @@ impl GraphDB {
         fs::File::create(&r_path).unwrap();
 
         // property files
-        // todo!("touch property files");
+        let mut p_path = root_path.clone();
+        p_path.push(PROPERTY_FILE_NAME);
+        fs::File::create(&p_path).unwrap();
 
         // index files
         // todo!("touch index files");
@@ -57,7 +59,7 @@ impl GraphDB {
         // others (caching, transactions, tmp, types ...)
         // todo!("touch other files");
 
-        let db = DB::new(RwLock::new(DBInner::new(&r_path, &v_path)
+        let db = DB::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path)
             .expect("Fatal: failed DB_Inner-initialization")));
         println!("Finished DB initialization from scratch");
         Ok(GraphDB {
@@ -90,8 +92,15 @@ impl GraphDB {
             return Err(format!("Relationship file ({:?}) does not exist", r_path));
         }
 
+        // property files
+        let mut p_path = root_path.clone();
+        p_path.push(PROPERTY_FILE_NAME);
+        if !p_path.exists() {
+            return Err(format!("Property file ({:?}) does not exist", p_path));
+        }
 
-        let db = DB::new(RwLock::new(DBInner::new(&r_path, &v_path)
+
+        let db = DB::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path)
             .expect("Fatal: failed DB_Inner-initialization")));
         println!("Finished DB initialization from files");
         Ok(GraphDB {
@@ -222,14 +231,16 @@ pub fn lock_db_handle (db_handle: &DB) -> Option<RwLockReadGuard<'_, DBInner>>{
 pub struct DBInner {
     pub f_rel: RelationshipFile,
     pub f_vert: VertexFile,
+    pub f_prop: PropertyFile,
 }
 
 
 impl DBInner {
-    pub fn new (f_rel_path: &Path, f_vert_path: &Path) -> Result<Self, std::io::Error> {
+    pub fn new (f_rel_path: &Path, f_vert_path: &Path, f_prop_path: &Path) -> Result<Self, std::io::Error> {
         let f_rel = RelationshipFile::new(f_rel_path)?;
         let f_vert = VertexFile::new(f_vert_path)?;
-        Ok (DBInner { f_rel, f_vert })
+        let f_prop = PropertyFile::new(f_prop_path)?;
+        Ok (DBInner { f_rel, f_vert, f_prop })
     }
 
 

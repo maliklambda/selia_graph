@@ -76,6 +76,7 @@ pub enum RelationshipCreationFailure {
     WrongByteLength,
     IoFailure,
     DbLock,
+    ReadNullId,
     Other,
 }
 

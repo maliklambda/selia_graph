@@ -1,4 +1,6 @@
 use std::io::Write;
+use std::os::unix::fs::FileExt;
+use crate::constants::lengths::START_VERTICES;
 use crate::errors::{
     RelationshipCreationFailure,
     RelationshipCreationError,
@@ -14,16 +16,23 @@ use crate::objects::{
 
 
 
-pub fn write_vertex_locked (db_handle: &mut DB, v: Vertex) -> Result<(), VertexCreationError> {
-    let mut db_lock = lock_db_handle_mut(db_handle)
+pub fn write_vertex_locked (db_handle: &DB, v: Vertex) -> Result<(), VertexCreationError> {
+    let db_lock = lock_db_handle_mut(db_handle)
         .ok_or(VertexCreationError::new("Db lock (rw) failed", VertexCreationFailure::DbLock)
     )?;
-    db_lock.f_vert.file.write_all(v.vertex.to_bytes())?;
+    let offset = VertexFile::get_offset(v.id);
+    db_lock.f_vert.file.write_all_at(v.vertex.to_bytes(), offset)?;
     Ok(())
 }
 
 
 pub fn write_relationship_locked (db_handle: &mut DB, r: Relationship) -> Result<(), RelationshipCreationError> {
+    if r.rel.vertex_refs.start_vertex == r.rel.vertex_refs.end_vertex {
+        return Err(RelationshipCreationError::new(
+            "Cannot write relationship where start == end (vertex cannot have a relationship with itself)", 
+            RelationshipCreationFailure::Other
+        ))
+    }
     let mut db_lock = lock_db_handle_mut(db_handle)
         .ok_or(RelationshipCreationError::new("Db lock (rw) failed", RelationshipCreationFailure::DbLock)
     )?;
