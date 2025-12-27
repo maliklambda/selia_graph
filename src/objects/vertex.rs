@@ -168,14 +168,14 @@ impl VertexFile {
     }
 
 
-    pub fn get_first_available_id (db_handle: &mut DB) -> Option<VertexId> {
+    pub fn get_first_available_id (db_handle: &DB) -> Option<VertexId> {
         let mut lock = lock_db_handle_mut(db_handle)?;
         let new_id = lock.f_vert.first_available_id;
         lock.f_vert.first_available_id += 1;
         Some(new_id)
     }
 
-    pub fn get_offset (vertex_id: VertexId) -> u64 {
+    pub fn get_offset_vert (vertex_id: VertexId) -> u64 {
         ((vertex_id*VERTEX_BYTE_LENGTH as u32) + START_VERTICES as u32) as u64
     }
 }

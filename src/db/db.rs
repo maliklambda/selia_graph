@@ -126,7 +126,7 @@ impl GraphDB {
 
         // read 9 bytes (size of vertex as &[u8]) -> create new vertex
         let mut buf = [0_u8; VERTEX_BYTE_LENGTH];
-        let offset = VertexFile::get_offset(vertex_id);
+        let offset = VertexFile::get_offset_vert(vertex_id);
         db_lock.f_vert.file.read_exact_at(&mut buf, offset).unwrap();
         println!("{:?}", buf);
         let v = Vertex::from_bytes(&buf, vertex_id)?;

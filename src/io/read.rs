@@ -19,7 +19,7 @@ pub fn read_vertex_locked (db_handle: &DB, vertex_id: VertexId) -> Result<Vertex
 
     // read 9 bytes (size of vertex as &[u8]) -> create new vertex
     let mut buf = [0_u8; VERTEX_BYTE_LENGTH];
-    let offset = VertexFile::get_offset(vertex_id);
+    let offset = VertexFile::get_offset_vert(vertex_id);
     println!("Reading node @{offset} (id={vertex_id})");
     db_lock.f_vert.file.read_exact_at(&mut buf, offset).unwrap();
     println!("{:?}", buf);
@@ -41,7 +41,8 @@ pub fn read_relationship_locked (db_handle: &DB, rel_id: RelationshipId) -> Resu
     )?;
 
     let mut buf = [0_u8; RELATIONSHIP_BYTE_LENGTH];
-    let offset = RelationshipFile::get_offset(rel_id);
+    let offset = RelationshipFile::get_offset_rel(rel_id);
+    println!("Reading relationship @{offset}");
     db_lock.f_rel.file.read_exact_at(&mut buf, offset).unwrap();
     println!("{:?}", buf);
     let r = Relationship::from_bytes(&buf, rel_id)?;

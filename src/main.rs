@@ -22,22 +22,49 @@ fn main() {
 
     let mut handles = Vec::new();
     for _ in 0..1 {
-        let mut db_handle = Arc::clone(&db);
+        let db_handle = Arc::clone(&db);
         let handle = thread::spawn(move || {
-            add_node(&mut db_handle, "{'type': 'edos'}").unwrap();
-            add_node(&mut db_handle, "{'type': 'whoo'}").unwrap();
+            add_node(&db_handle, "{'type': 'edos'}").unwrap();
+            add_node(&db_handle, "{'type': 'whoo'}").unwrap();
+            add_node(&db_handle, "{'type': 'yoo'}").unwrap();
+            add_node(&db_handle, "{'type': 'delcos'}").unwrap();
             let v = read_vertex_locked(&db_handle, 0).unwrap();
             println!("read this from file: {:?}", v);
             let v = read_vertex_locked(&db_handle, 1).unwrap();
             println!("read this from file: {:?}", v);
 
+
+            add_relationship(&db_handle, 0, 1, "{'hello': 'world'}").unwrap();
+            add_relationship(&db_handle, 0, 2, "{'hello': 'world'}").unwrap();
+            add_relationship(&db_handle, 0, 3, "{'hello': 'world'}").unwrap();
+
             println!("started node reading");
             let nodes = get_all_nodes(&db_handle);
             println!("read all nodes: {:?}", nodes);
+            
+            let r0 = read_relationship_locked(&db_handle, 0).unwrap();
+            let r1 = read_relationship_locked(&db_handle, 1).unwrap();
+            let r2 = read_relationship_locked(&db_handle, 2).unwrap();
+            println!("{:?}", r0);
+            println!("{:?}", r1);
+            println!("{:?}", r2);
+
             todo!("Finish");
 
-            add_relationship(&mut db_handle, 0, 9, "{'hello': 'world'}").unwrap();
-            add_relationship(&mut db_handle, 9, 0, "{'hello': 'world'}").unwrap();
+
+            
+            add_relationship(&db_handle, 0, 2, "{'hello': 'world'}").unwrap();
+            println!("started node reading");
+            let nodes = get_all_nodes(&db_handle);
+            println!("read all nodes: {:?}", nodes);
+
+            println!("started node reading");
+            let nodes = get_all_nodes(&db_handle);
+            println!("read all nodes: {:?}", nodes);
+            let r1 = read_relationship_locked(&db_handle, 0).unwrap();
+            println!("{:?}", r1);
+            let r2 = read_relationship_locked(&db_handle, 1).unwrap();
+            println!("{:?}", r2);
 
 
 

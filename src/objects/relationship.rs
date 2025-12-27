@@ -199,12 +199,8 @@ impl RelationshipFile {
         Some(rel)
     }
 
-    pub fn get_offset (vertex_id: VertexId) -> u64 {
-        (vertex_id + START_RELATIONSHIPS as u32) as u64
-    }
-
-    pub fn get_offset_rel (rel_id: RelationshipId) -> u64 {
-        (rel_id+ START_RELATIONSHIPS as u32) as u64
+   pub fn get_offset_rel (rel_id: RelationshipId) -> u64 {
+        ((rel_id*RELATIONSHIP_BYTE_LENGTH as u32) + START_RELATIONSHIPS as u32) as u64
     }
 }
 
