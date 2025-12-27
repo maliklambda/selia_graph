@@ -54,6 +54,29 @@ pub fn write_relationship_locked (db_handle: &DB, r: Relationship) -> Result<(),
 }
 
 
+pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex: VertexId, properties: &str) -> Result<(), RelationshipCreationError> {
+    let v_start = get_node(db_handle, start_vertex).unwrap();
+    let (s_prev, s_next) = v_start.get_prev_next(db_handle).unwrap();
+
+    let v_end = get_node(db_handle, end_vertex).unwrap();
+    let (e_prev, e_next) = v_end.get_prev_next(db_handle).unwrap();
+
+    let new_rel_id = RelationshipFile::get_first_available_id(db_handle).unwrap();
+
+    let mut new_rel = Relationship {
+        id: new_rel_id,
+        rel: FileRelationship::new(
+            0, 0, true, RelationshipVertexRefs::new(start_vertex, end_vertex, s_prev, s_next, e_prev, e_next)
+        )
+    };
+
+    update_existing_rel_ptrs(db_handle, &mut new_rel, v_start, start_vertex, v_end, end_vertex, (s_prev, s_next, e_prev, e_next)).unwrap();
+
+    println!("Writing this relationship to file: {:?}", new_rel);
+    write_relationship_locked(db_handle, new_rel)?;
+
+    Ok(())
+}
 
 
 pub fn update_existing_rel_ptrs (
@@ -122,4 +145,25 @@ pub fn update_existing_rel_ptrs (
 
     Ok(())
 }
+
+
+
+
+
+pub fn add_new_node (db_handle: &DB, properties: &str) -> Result<(), VertexCreationError> {
+    //
+    // parse properties (&str to bson)
+
+    // lock db_handle
+    let new_id = VertexFile::get_first_available_id(db_handle).unwrap();
+
+    // create new vertex
+    let v = Vertex::new(new_id, FileVertex::new(true, None, None)); // add property reference
+    //write new node to file
+    write_vertex_locked(db_handle, v)
+}
+
+
+
+
 

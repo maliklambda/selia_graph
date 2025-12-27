@@ -3,6 +3,8 @@ use std::slice;
 use std::fs::{OpenOptions};
 use std::path::{Path, PathBuf};
 use crate::constants::lengths::{START_RELATIONSHIPS, RELATIONSHIP_BYTE_LENGTH};
+use crate::db::db::{lock_db_handle, lock_db_handle_mut};
+use crate::objects::free_chunks::RelationshipFreeChunks;
 use crate::types::{
     RelationshipId, RelationshipType, VertexId, DB
 
@@ -166,6 +168,7 @@ pub struct RelationshipFile {
     pub file_path: PathBuf,
     pub start_relationships: usize,
     pub first_available_id: RelationshipId,
+    pub free_chunks: RelationshipFreeChunks,
     buffer: [u8; RELATIONSHIP_BYTE_LENGTH],
 }
 
@@ -181,6 +184,7 @@ impl RelationshipFile {
             file_path: file_path.to_path_buf(),
             start_relationships: START_RELATIONSHIPS, 
             first_available_id: 0,
+            free_chunks: RelationshipFreeChunks::new(),
             buffer: [0u8; RELATIONSHIP_BYTE_LENGTH],
         })
     }
@@ -201,6 +205,13 @@ impl RelationshipFile {
 
    pub fn get_offset_rel (rel_id: RelationshipId) -> u64 {
         ((rel_id*RELATIONSHIP_BYTE_LENGTH as u32) + START_RELATIONSHIPS as u32) as u64
+    }
+
+    pub fn get_first_available_id (db_handle: &DB) -> Option<RelationshipId> {
+        let mut lock = lock_db_handle_mut(db_handle)?;
+        let new_id = lock.f_rel.first_available_id;
+        lock.f_rel.first_available_id += 1;
+        Some(new_id)
     }
 }
 
