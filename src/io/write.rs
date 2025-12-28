@@ -1,14 +1,14 @@
 use crate::methods::*;
-use crate::read_relationship_locked;
 use std::os::unix::fs::FileExt;
-use crate::constants::lengths::{RELATIONSHIP_NULL_ID, START_VERTICES};
+use crate::constants::lengths::RELATIONSHIP_NULL_ID;
 use crate::errors::{
     RelationshipCreationFailure,
     RelationshipCreationError,
     VertexCreationFailure,
     VertexCreationError
 };
-use crate::types::{VertexId, DB};
+use crate::types::VertexId;
+use crate::DB;
 use crate::db::db::lock_db_handle_mut;
 
 use crate::objects::{
@@ -100,7 +100,7 @@ pub fn update_existing_rel_ptrs (
         _ => {
             println!("Need to update last relationships next_rel and first relationships prev_rel for start_vertex");
             // update s_next_rel.rel:vertex_refs.start_prev to point to new_rel_id
-            let mut s_next_rel = read_relationship_locked(db_handle, v_start.vertex.first_rel).unwrap();
+            let mut s_next_rel = db_handle.get_relationship(v_start.vertex.first_rel).unwrap();
             if s_next_rel.rel.vertex_refs.start_vertex == start_vertex {
                 if s_next_rel.rel.vertex_refs.start_prev == RELATIONSHIP_NULL_ID && s_next_rel.rel.vertex_refs.start_next == RELATIONSHIP_NULL_ID {
                     // update new rel
@@ -113,7 +113,7 @@ pub fn update_existing_rel_ptrs (
                 } else {
                     //set prev_last_rel.start_next to new_rel.id
                     let prev_last_rel_id = s_next_rel.rel.vertex_refs.start_prev;
-                    let mut prev_last_rel = read_relationship_locked(db_handle, prev_last_rel_id).unwrap();
+                    let mut prev_last_rel = db_handle.get_relationship(prev_last_rel_id).unwrap();
                     prev_last_rel.rel.vertex_refs.start_next = new_rel.id;
                     update_relationship(db_handle, prev_last_rel.id, prev_last_rel).unwrap();
 

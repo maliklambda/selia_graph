@@ -1,15 +1,14 @@
-use crate::objects::{objects::Object, property::PropertyFile, relationship::RelationshipFile, vertex::{Vertex, VertexFile}};
-use crate::constants::{paths::*, lengths::*, limits::*};
+use crate::{objects::{property::PropertyFile, relationship::RelationshipFile, vertex::{VertexFile}}};
+use crate::constants::{paths::*, limits::*};
 use crate::types::*;
-use crate::errors::*;
-use std::{fs::{File, OpenOptions}, os::unix::fs::FileExt, sync::{Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard}};
+use std::{fs::{File, OpenOptions}, sync::{Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard}};
 use std::path::{Path, PathBuf};
 use std::fs;
 
 
 
 pub struct GraphDB {
-    pub db: DB,
+    pub db: DBInnerHandle,
     pub name: String,
     pub config: ConfigHandle,
 }
@@ -59,7 +58,7 @@ impl GraphDB {
         // others (caching, transactions, tmp, types ...)
         // todo!("touch other files");
 
-        let db = DB::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path)
+        let db = DBInnerHandle::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path)
             .expect("Fatal: failed DB_Inner-initialization")));
         println!("Finished DB initialization from scratch");
         Ok(GraphDB {
@@ -100,7 +99,7 @@ impl GraphDB {
         }
 
 
-        let db = DB::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path)
+        let db = DBInnerHandle::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path)
             .expect("Fatal: failed DB_Inner-initialization")));
         println!("Finished DB initialization from files");
         Ok(GraphDB {
@@ -117,22 +116,6 @@ impl GraphDB {
         path.push(CONFIG_FILE_NAME);
         path
     }
-
-
-    pub fn get_node (db_handle: &mut Self, vertex_id: VertexId) -> Result<Vertex, VertexCreationError> {
-        let db_lock = lock_db_handle(&db_handle.db)
-            .ok_or(VertexCreationError::new("Db lock (r) failed", VertexCreationFailure::DbLock)
-        )?;
-
-        // read 9 bytes (size of vertex as &[u8]) -> create new vertex
-        let mut buf = [0_u8; VERTEX_BYTE_LENGTH];
-        let offset = VertexFile::get_offset_vert(vertex_id);
-        db_lock.f_vert.file.read_exact_at(&mut buf, offset).unwrap();
-        println!("{:?}", buf);
-        let v = Vertex::from_bytes(&buf, vertex_id)?;
-        Ok(v)
-    }
-
 }
 
 
@@ -217,12 +200,12 @@ impl Version {
 }
 
 pub fn lock_db_handle_mut (db_handle: &DB) -> Option<RwLockWriteGuard<'_, DBInner>>{
-    let db_lock = db_handle.write().ok()?;
+    let db_lock = db_handle.db.write().ok()?;
     Some(db_lock)
 }
 
 pub fn lock_db_handle (db_handle: &DB) -> Option<RwLockReadGuard<'_, DBInner>>{
-    let db_lock = db_handle.read().ok()?;
+    let db_lock = db_handle.db.read().ok()?;
     Some(db_lock)
 }
 
@@ -243,7 +226,9 @@ impl DBInner {
         Ok (DBInner { f_rel, f_vert, f_prop })
     }
 
-
 }
 
 
+pub struct DB {
+    pub db: DBInnerHandle,
+}

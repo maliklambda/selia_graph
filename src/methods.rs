@@ -17,8 +17,9 @@ use crate::{
         }
     }, 
     types::{
-        RelationshipId, VertexId, DB
-    }
+        RelationshipId, VertexId,
+    },
+    DB,
 };
 
 
@@ -33,8 +34,8 @@ pub fn add_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex: Ver
 }
 
 
-pub fn get_node (db_handle: &DB, node_id: VertexId) -> Option<Vertex> {
-    read_vertex_locked(db_handle, node_id).ok()
+pub fn get_node (db_handle: &DB, node_id: VertexId) -> Result<Vertex, VertexCreationError> {
+    read_vertex_locked(db_handle, node_id)
 }
 
 

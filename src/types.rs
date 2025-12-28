@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 use crate::db::db::DBInner;
 
 pub type Arwl<T> = Arc<RwLock<T>>;
-pub type DB = Arwl<DBInner>;
+pub type DBInnerHandle = Arwl<DBInner>;
 
 
 // wrapper type ID is used as abstraction for VertexId, RelationshipId, etc.

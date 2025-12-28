@@ -1,12 +1,13 @@
 use std::os::unix::fs::FileExt;
 use crate::{
-    constants::{lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, VERTEX_PAGE_LENGTH, VERTICES_PER_PAGE}, sys::PAGE_SIZE}, db::db::lock_db_handle, errors::{
+    constants::{lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, VERTEX_PAGE_LENGTH}}, db::db::lock_db_handle, errors::{
         RelationshipCreationError, RelationshipCreationFailure, VertexCreationError, VertexCreationFailure
     }, objects::{
-        objects::Object, relationship::*, vertex::{self, *}
+        objects::Object, relationship::*, vertex::*
     }, types::{
-        RelationshipId, VertexId, DB
-    }
+        RelationshipId, VertexId
+    }, 
+    DB
 };
 use crate::{RELATIONSHIP_BYTE_LENGTH, VERTEX_BYTE_LENGTH};
 

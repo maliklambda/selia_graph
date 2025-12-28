@@ -7,11 +7,12 @@ mod types;
 mod methods;
 
 
-use std::{sync::{Arc}, thread};
-use crate::{db::db::{GraphDB, Version}, io::{read::{read_relationship_locked, read_vertex_locked}, write::{write_relationship_locked, write_vertex_locked}}, objects::{relationship::Relationship, vertex::{self, Vertex}}, types::VertexId};
+use std::thread;
+use crate::{
+    db::db::{GraphDB, Version, DB}, 
+    types::VertexId};
 use crate::objects::iterator::RelationshipIterator;
 use crate::constants::{lengths::*};
-use crate::methods::*;
 
 
 fn main() {
@@ -22,76 +23,42 @@ fn main() {
 
     let mut handles = Vec::new();
     for _ in 0..1 {
-        let db_handle = Arc::clone(&db);
+        let db_handle = DB::new(&db);
         let handle = thread::spawn(move || {
-            add_node(&db_handle, "{'type': 'edos'}").unwrap();
-            add_node(&db_handle, "{'type': 'whoo'}").unwrap();
-            add_node(&db_handle, "{'type': 'yoo'}").unwrap();
-            add_node(&db_handle, "{'type': 'delcos'}").unwrap();
-            let v = read_vertex_locked(&db_handle, 0).unwrap();
+            let n = db_handle.get_node(0).unwrap();
+            println!("node: {:?}", n);
+            db_handle.add_node("{'type': 'edos'}").unwrap();
+            db_handle.add_node("{'type': 'whoo'}").unwrap();
+            db_handle.add_node("{'type': 'yoo'}").unwrap();
+            db_handle.add_node("{'type': 'delcos'}").unwrap();
+            let v = db_handle.get_node(0).unwrap();
             println!("read this from file: {:?}", v);
-            let v = read_vertex_locked(&db_handle, 1).unwrap();
+            let v = db_handle.get_node(1).unwrap();
             println!("read this from file: {:?}", v);
 
 
-            add_relationship(&db_handle, 0, 1, "{'hello': 'world'}").unwrap();
-            add_relationship(&db_handle, 0, 2, "{'hello': 'world'}").unwrap();
-            add_relationship(&db_handle, 0, 3, "{'hello': 'world'}").unwrap();
+            db_handle.add_relationship(0, 1, "{'hello': 'world'}").unwrap();
+            db_handle.add_relationship(0, 2, "{'hello': 'world'}").unwrap();
+            db_handle.add_relationship(0, 3, "{'hello': 'world'}").unwrap();
 
             println!("started node reading");
-            let nodes = get_all_nodes(&db_handle);
+            let nodes = db_handle.get_all_nodes();
             println!("read all nodes: {:?}", nodes);
             
-            let r0 = read_relationship_locked(&db_handle, 0).unwrap();
-            let r1 = read_relationship_locked(&db_handle, 1).unwrap();
-            let r2 = read_relationship_locked(&db_handle, 2).unwrap();
-            println!("{:?}", r0);
-            println!("{:?}", r1);
-            println!("{:?}", r2);
-
-            todo!("Finish");
-
-
-            
-            add_relationship(&db_handle, 0, 2, "{'hello': 'world'}").unwrap();
-            println!("started node reading");
-            let nodes = get_all_nodes(&db_handle);
-            println!("read all nodes: {:?}", nodes);
-
-            println!("started node reading");
-            let nodes = get_all_nodes(&db_handle);
-            println!("read all nodes: {:?}", nodes);
-            let r1 = read_relationship_locked(&db_handle, 0).unwrap();
-            println!("{:?}", r1);
-            let r2 = read_relationship_locked(&db_handle, 1).unwrap();
-            println!("{:?}", r2);
-
-
-
             let v_id: VertexId = 0;
-            let r = read_relationship_locked(&db_handle, 0).unwrap();
+            let r = db_handle.get_relationship(0).unwrap();
             let rel_iterator = RelationshipIterator::new(&db_handle, r, v_id);
             let filtered: Vec<_> = rel_iterator.into_iter().collect();
             println!("\n\n\n");
             println!("filtered = {:?}", filtered);
             println!("filtered length = {:?}", filtered.len());
 
+            let out = db_handle.get_outgoing_relationships(0);
+            println!("outs = {:?}", out);
 
+            let neighbors = db_handle.get_neighbors(0);
+            println!("neighbors = {:?}", neighbors);
 
-
-            let r = read_relationship_locked(&db_handle, 0).unwrap();
-            let rel_iterator = RelationshipIterator::new(&db_handle, r, v_id);
-            let filtered: Vec<_> = rel_iterator.into_iter().filter(|_| true).collect();
-            println!("\n\n\n");
-            println!("filtered = {:?}", filtered);
-            println!("filtered length = {:?}", filtered.len());
-            // let mut count = 0;
-            // println!("\n\n\nStarting iteration");
-            // for rel in rel_iterator {
-            //     count += 1;
-            //     println!("Iterating {:?}", rel);
-            // }
-            // println!("{count}");
         });
         handles.push(handle);
     }

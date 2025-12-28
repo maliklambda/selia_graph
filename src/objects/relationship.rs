@@ -3,14 +3,13 @@ use std::slice;
 use std::fs::{OpenOptions};
 use std::path::{Path, PathBuf};
 use crate::constants::lengths::{START_RELATIONSHIPS, RELATIONSHIP_BYTE_LENGTH};
-use crate::db::db::{lock_db_handle, lock_db_handle_mut};
+use crate::db::db::lock_db_handle_mut;
 use crate::objects::free_chunks::RelationshipFreeChunks;
 use crate::types::{
-    RelationshipId, RelationshipType, VertexId, DB
-
-
+    RelationshipId, RelationshipType, VertexId
 };
 use crate::errors::*;
+use crate::DB;
 
 use crate::objects::{
     property::PropertyId, 

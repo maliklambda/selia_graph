@@ -5,8 +5,8 @@ use crate::{
     }, types::{
         RelationshipId,
         VertexId,
-        DB
-    }
+    },
+    DB
 };
 
 
