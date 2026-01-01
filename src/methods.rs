@@ -87,6 +87,7 @@ pub fn get_neighboring_ids (db_handle: &DB, node_id: VertexId) -> Vec<VertexId> 
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
     let rel_iterator = RelationshipIterator::new(db_handle, first_rel, node_id);
     rel_iterator.into_iter().map(|r| {
+        println!("getting nearest ids for {:?}", r);
         if r.rel.vertex_refs.start_vertex == node_id {
             r.rel.vertex_refs.end_vertex
         } else {
@@ -101,4 +102,32 @@ pub fn get_neighbors (db_handle: &DB, node_id: VertexId) -> Vec<Vertex> {
     let ids = get_neighboring_ids(db_handle, node_id);
     ids.iter().map(|id| get_node(db_handle, *id).unwrap()).collect()
 }
+
+
+pub fn dfs (db_handle: &DB, start_id: VertexId) -> Vec<VertexId> {
+    println!("Starting DFS\n\n\n");
+    let mut visited: Vec<VertexId> = vec![];
+    let mut stack: Vec<VertexId> = vec![];
+    inner_dfs(db_handle, start_id, &mut visited, &mut stack);
+    visited
+}
+ 
+
+fn inner_dfs (db_handle: &DB, node: VertexId, visited: &mut Vec<VertexId>, stack: &mut Vec<VertexId>) {
+    if !visited.contains(&node){
+        println!("node = {:?}", node);
+        let mut neighbors = db_handle.get_neighboring_ids(node);
+        neighbors.sort();
+        println!("neighbors: {:?}", &neighbors);
+        stack.extend(neighbors);
+        visited.push(node);
+        println!("stack: {:?} visited: {:?}", stack, visited);
+        for neighbor in stack.clone() {
+            println!("executing dfs for n = {:?}", neighbor);
+            inner_dfs(db_handle, neighbor, visited, stack);
+        }
+    };
+
+}
+
 

@@ -68,6 +68,10 @@ impl DB {
         get_neighbors(self, node_id)
     }
 
+    pub fn dfs (&self, start_id: VertexId) -> Vec<VertexId> {
+        dfs(self, start_id)
+    }
+
 
 }
 

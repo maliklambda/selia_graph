@@ -15,6 +15,7 @@ use crate::objects::{
     objects::Object, relationship::*, vertex::*
 };
 
+use crate::io::update_ptrs::update_existing_rel_ptrs;
 
 
 pub fn write_vertex_locked (db_handle: &DB, v: Vertex) -> Result<(), VertexCreationError> {
@@ -77,76 +78,6 @@ pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex:
 
     Ok(())
 }
-
-
-pub fn update_existing_rel_ptrs (
-    db_handle: &DB, 
-    new_rel: &mut Relationship, 
-    v_start: Vertex, 
-    start_vertex: VertexId, 
-    v_end: Vertex, 
-    end_vertex: VertexId, 
-    prev_next: (VertexId, VertexId, VertexId, VertexId),
-    ) -> Result<(), String> {
-    let (s_prev, s_next, e_prev, e_next) = prev_next;
-    // update pointers of start and end node to include new relationship in dll
-    match (s_prev, s_next){
-        (RELATIONSHIP_NULL_ID, RELATIONSHIP_NULL_ID) => {
-            println!("No relationships for start node. Updating start_vertex's first_rel.");
-            let mut new_start = v_start;
-            new_start.vertex.first_rel = new_rel.id;
-            update_node(db_handle, start_vertex, new_start).unwrap();
-        }
-        _ => {
-            println!("Need to update last relationships next_rel and first relationships prev_rel for start_vertex");
-            // update s_next_rel.rel:vertex_refs.start_prev to point to new_rel_id
-            let mut s_next_rel = db_handle.get_relationship(v_start.vertex.first_rel).unwrap();
-            if s_next_rel.rel.vertex_refs.start_vertex == start_vertex {
-                if s_next_rel.rel.vertex_refs.start_prev == RELATIONSHIP_NULL_ID && s_next_rel.rel.vertex_refs.start_next == RELATIONSHIP_NULL_ID {
-                    // update new rel
-                    new_rel.rel.vertex_refs.start_prev = s_next_rel.id;
-                    new_rel.rel.vertex_refs.start_next = s_next_rel.id;
-                    // update existing rel
-                    s_next_rel.rel.vertex_refs.start_next = new_rel.id;
-                    s_next_rel.rel.vertex_refs.start_prev = new_rel.id;
-                    update_relationship(db_handle, s_next_rel.id, s_next_rel).unwrap();
-                } else {
-                    //set prev_last_rel.start_next to new_rel.id
-                    let prev_last_rel_id = s_next_rel.rel.vertex_refs.start_prev;
-                    let mut prev_last_rel = db_handle.get_relationship(prev_last_rel_id).unwrap();
-                    prev_last_rel.rel.vertex_refs.start_next = new_rel.id;
-                    update_relationship(db_handle, prev_last_rel.id, prev_last_rel).unwrap();
-
-                    //set to s_next_rel.start_prev to new_rel.id
-                    s_next_rel.rel.vertex_refs.start_prev = new_rel.id;
-                    update_relationship(db_handle, s_next_rel.id, s_next_rel).unwrap();
-                    // todo!("More than 2 relationships in ll");
-                }
-            } else {
-                println!("update s_next_rel.end_prev to new_rel_id");
-            }
-
-            // update s_prev.rel:vertex_refs.next to point to new_rel_id
-            
-        }
-    }
-
-    match (e_prev, e_next) {
-        (RELATIONSHIP_NULL_ID, RELATIONSHIP_NULL_ID) => {
-            println!("No relationships for end node. Updating end_vertex's first_rel.");
-            let mut new_end = v_end;
-            new_end.vertex.first_rel = new_rel.id;
-            update_node(db_handle, end_vertex, new_end).unwrap();
-        }
-        _ => {
-            println!("Need to update last relationships next_rel and first relationships prev_rel for end_vertex");
-        }
-    };
-
-    Ok(())
-}
-
-
 
 
 
