@@ -21,14 +21,16 @@ pub struct RelationshipIterator <'a> {
 }
 
 impl <'a> RelationshipIterator <'a> {
-    pub fn new (db_handle: &'a DB, start_rel: Relationship, searched_vertex_id: VertexId) -> Self {
+    pub fn new (db_handle: &'a DB, searched_vertex_id: VertexId) -> Self {
         let direction = IterDirection::Forward;
+        let node = db_handle.get_node(searched_vertex_id).unwrap();
+        println!("starting iteration with this node: {:?}", node);
 
         Self {
             db_handle,
             searched_vertex_id,
             start_rel_id: None,
-            next_rel_id: start_rel.id,
+            next_rel_id: node.vertex.first_rel,
             direction
         }
     }
@@ -47,18 +49,23 @@ impl Iterator for RelationshipIterator <'_> {
             return None;
         }
         if self.next_rel_id == RELATIONSHIP_NULL_ID { return None }
+        println!("iterating: this is current rel: {:?}", db_lock.f_rel.read_relationship(self.next_rel_id));
+        println!("This node id is searched: {:?}", self.searched_vertex_id);
         match db_lock.f_rel.read_relationship(self.next_rel_id) {
             Some(next_rel) => {
                 // determine next rel_id
+                print!("Continuing iteration with");
                 if next_rel.rel.vertex_refs.start_vertex == self.searched_vertex_id {
+                    println!("start: {}", self.next_rel_id);
                     self.next_rel_id = next_rel.rel.vertex_refs.start_next;
                 } else if next_rel.rel.vertex_refs.end_vertex == self.searched_vertex_id {
                     self.next_rel_id = next_rel.rel.vertex_refs.end_next;
+                    println!("end: {}", self.next_rel_id);
                 } else { // this should not be (in that case, the searched_id is not part of the relationship)
+                    println!("Noting...");
                     return None;
                 }
 
-                self.next_rel_id = next_rel.rel.vertex_refs.start_next;
                 Some(next_rel)
             }
             None => {
