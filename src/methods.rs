@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     errors::{
         RelationshipCreationError, VertexCreationError
@@ -86,6 +88,9 @@ pub fn get_neighboring_ids (db_handle: &DB, node_id: VertexId) -> Vec<VertexId> 
     let node = get_node(db_handle, node_id).unwrap();
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
     let rel_iterator = RelationshipIterator::new(db_handle, first_rel, node_id);
+    println!("\n\n\n length: {:?}", rel_iterator.collect::<Vec<Relationship>>());
+    let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
+    let rel_iterator = RelationshipIterator::new(db_handle, first_rel, node_id);
     rel_iterator.into_iter().map(|r| {
         println!("getting nearest ids for {:?}", r);
         if r.rel.vertex_refs.start_vertex == node_id {
@@ -93,7 +98,9 @@ pub fn get_neighboring_ids (db_handle: &DB, node_id: VertexId) -> Vec<VertexId> 
         } else {
             r.rel.vertex_refs.start_vertex
         }
-    }).collect()
+    }).collect::<HashSet<VertexId>>()
+        .into_iter()
+        .collect::<Vec<VertexId>>()
 }
 
 
@@ -115,15 +122,11 @@ pub fn dfs (db_handle: &DB, start_id: VertexId) -> Vec<VertexId> {
 
 fn inner_dfs (db_handle: &DB, node: VertexId, visited: &mut Vec<VertexId>, stack: &mut Vec<VertexId>) {
     if !visited.contains(&node){
-        println!("node = {:?}", node);
         let mut neighbors = db_handle.get_neighboring_ids(node);
         neighbors.sort();
-        println!("neighbors: {:?}", &neighbors);
         stack.extend(neighbors);
         visited.push(node);
-        println!("stack: {:?} visited: {:?}", stack, visited);
         for neighbor in stack.clone() {
-            println!("executing dfs for n = {:?}", neighbor);
             inner_dfs(db_handle, neighbor, visited, stack);
         }
     };

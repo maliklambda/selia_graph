@@ -8,10 +8,7 @@ mod methods;
 
 
 use std::thread;
-use crate::{
-    db::db::{GraphDB, Version, DB}, 
-    types::VertexId};
-use crate::objects::iterator::RelationshipIterator;
+use crate::db::db::{GraphDB, Version, DB};
 use crate::constants::{lengths::*};
 
 
@@ -32,13 +29,14 @@ fn main() {
 
 
             db_handle.add_relationship(0, 1, "{'hello': 'world'}").unwrap();
+            db_handle.add_relationship(0, 2, "{'hello': 'world'}").unwrap();
+            db_handle.add_relationship(0, 3, "{'hello': 'world'}").unwrap();
             db_handle.add_relationship(2, 0, "{'hello': 'world'}").unwrap();
             for i in 0..=3 {
                 let r = db_handle.get_relationship(i).unwrap();
                 println!("current rel: {:?}", r);
             }
             println!("neighbors: {:?}", db_handle.get_neighboring_ids(0));
-            todo!("continue here");
 
 
             let dfs_items = db_handle.dfs(2);

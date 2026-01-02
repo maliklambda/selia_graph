@@ -71,7 +71,9 @@ pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex:
         )
     };
 
+    println!("new rel before: {:?}", new_rel);
     update_existing_rel_ptrs(db_handle, &mut new_rel, v_start, start_vertex, v_end, end_vertex, (s_prev, s_next, e_prev, e_next)).unwrap();
+    println!("new rel after {:?}", new_rel);
 
     println!("Writing this relationship to file: {:?}", new_rel);
     write_relationship_locked(db_handle, new_rel)?;
