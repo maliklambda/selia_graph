@@ -32,6 +32,10 @@ impl DB {
         get_all_nodes(self)
     }
 
+    pub fn get_all_relationships (&self) -> Vec<Relationship> {
+        get_all_relationships(self)
+    }
+
 
     pub fn update_node (&self, node_id: VertexId, new_node: Vertex) -> Result<(), VertexCreationError> {
         update_node(self, node_id, new_node)

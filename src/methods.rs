@@ -1,27 +1,21 @@
 use std::collections::HashSet;
 
 use crate::{
-    errors::{
+    DB, errors::{
         RelationshipCreationError, VertexCreationError
-    }, 
-    io::{
+    }, io::{
         read::{
-            read_all_nodes, read_relationship_locked, read_vertex_locked
+            read_all_nodes, read_all_relationships, read_relationship_locked, read_vertex_locked
         }, write::{
             add_new_node, add_new_relationship, write_relationship_locked, write_vertex_locked
         }
-    }, 
-    objects::{
-        iterator::RelationshipIterator, 
-        vertex::Vertex,
-        relationship::{
+    }, objects::{
+        iterator::RelationshipIterator, relationship::{
             Relationship, RelationshipFile
-        }
-    }, 
-    types::{
+        }, vertex::Vertex
+    }, types::{
         RelationshipId, VertexId,
-    },
-    DB,
+    }
 };
 
 
@@ -43,6 +37,11 @@ pub fn get_node (db_handle: &DB, node_id: VertexId) -> Result<Vertex, VertexCrea
 
 pub fn get_all_nodes (db_handle: &DB) -> Vec<Vertex> {
     read_all_nodes(db_handle).unwrap()
+}
+
+
+pub fn get_all_relationships (db_handle: &DB) -> Vec<Relationship> {
+    read_all_relationships(db_handle).unwrap()
 }
 
 
@@ -68,7 +67,7 @@ pub fn get_relationship(db_handle: &DB, rel_id: RelationshipId) -> Option<Relati
 pub fn get_ingoing_relationships (db_handle: &DB, node_id: VertexId) -> Vec<Relationship> {
     let node = get_node(db_handle, node_id).unwrap();
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
-    let rel_iterator = RelationshipIterator::new(db_handle, first_rel, node_id);
+    let rel_iterator = RelationshipIterator::new(db_handle, node_id);
     let condition = |r: &Relationship| r.rel.vertex_refs.end_vertex == node_id;
     rel_iterator.into_iter().filter(condition).collect()
 }
@@ -78,7 +77,7 @@ pub fn get_ingoing_relationships (db_handle: &DB, node_id: VertexId) -> Vec<Rela
 pub fn get_outgoing_relationships (db_handle: &DB, node_id: VertexId) -> Vec<Relationship> {
     let node = get_node(db_handle, node_id).unwrap();
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
-    let rel_iterator = RelationshipIterator::new(db_handle, first_rel, node_id);
+    let rel_iterator = RelationshipIterator::new(db_handle, node_id);
     let condition = |r: &Relationship| r.rel.vertex_refs.start_vertex == node_id;
     rel_iterator.into_iter().filter(condition).collect()
 }
@@ -87,19 +86,21 @@ pub fn get_outgoing_relationships (db_handle: &DB, node_id: VertexId) -> Vec<Rel
 pub fn get_neighboring_ids (db_handle: &DB, node_id: VertexId) -> Vec<VertexId> {
     let node = get_node(db_handle, node_id).unwrap();
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
-    let rel_iterator = RelationshipIterator::new(db_handle, first_rel, node_id);
+    let rel_iterator = RelationshipIterator::new(db_handle, node_id);
     println!("\n\n\n length: {:?}", rel_iterator.collect::<Vec<Relationship>>());
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
-    let rel_iterator = RelationshipIterator::new(db_handle, first_rel, node_id);
-    rel_iterator.into_iter().map(|r| {
-        println!("getting nearest ids for {:?}", r);
+    let rel_iterator = RelationshipIterator::new(db_handle, node_id);
+    rel_iterator.into_iter().map(|r| {println!("\n\ncur item{:?}\n\n", r); r})
+        .map(|r| {
+        println!("getting nearest ids for id = {} -> {:?}", node_id, r);
         if r.rel.vertex_refs.start_vertex == node_id {
             r.rel.vertex_refs.end_vertex
         } else {
             r.rel.vertex_refs.start_vertex
         }
-    }).collect::<HashSet<VertexId>>()
-        .into_iter()
+    })
+        // .collect::<HashSet<VertexId>>()
+        // .into_iter()
         .collect::<Vec<VertexId>>()
 }
 
@@ -112,7 +113,7 @@ pub fn get_neighbors (db_handle: &DB, node_id: VertexId) -> Vec<Vertex> {
 
 
 pub fn dfs (db_handle: &DB, start_id: VertexId) -> Vec<VertexId> {
-    println!("Starting DFS\n\n\n");
+    println!("\n\n\nStarting DFS");
     let mut visited: Vec<VertexId> = vec![];
     let mut stack: Vec<VertexId> = vec![];
     inner_dfs(db_handle, start_id, &mut visited, &mut stack);
@@ -121,16 +122,14 @@ pub fn dfs (db_handle: &DB, start_id: VertexId) -> Vec<VertexId> {
  
 
 fn inner_dfs (db_handle: &DB, node: VertexId, visited: &mut Vec<VertexId>, stack: &mut Vec<VertexId>) {
-    if !visited.contains(&node){
-        let mut neighbors = db_handle.get_neighboring_ids(node);
-        neighbors.sort();
-        stack.extend(neighbors);
-        visited.push(node);
-        for neighbor in stack.clone() {
-            inner_dfs(db_handle, neighbor, visited, stack);
-        }
-    };
-
+    if visited.contains(&node) { return; }
+    visited.push(node);
+    stack.push(node);
+    let neighbors = db_handle.get_neighboring_ids(node);
+    println!("neighbors for {} are {:?}", node, neighbors);
+    for n in neighbors {
+        inner_dfs(db_handle, n, visited, stack);
+    }
 }
 
 

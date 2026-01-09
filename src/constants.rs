@@ -9,6 +9,7 @@ pub mod lengths {
 
     pub const RELATIONSHIP_BYTE_LENGTH: usize = 33;
     pub const START_RELATIONSHIPS: usize = 0;
+    pub const RELATIONSHIP_PAGE_LENGTH: usize = 495;
     pub const RELATIONSHIP_NULL_ID: RelationshipId = u32::MAX;
 
     pub const VERTEX_BYTE_LENGTH: usize = 9;

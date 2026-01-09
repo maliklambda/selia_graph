@@ -1,13 +1,12 @@
 use std::os::unix::fs::FileExt;
 use crate::{
-    constants::{lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, VERTEX_PAGE_LENGTH}}, db::db::lock_db_handle, errors::{
+    DB, constants::lengths::{RELATIONSHIP_NULL_ID, RELATIONSHIP_PAGE_LENGTH, START_RELATIONSHIPS, START_VERTICES, VERTEX_PAGE_LENGTH}, db::db::lock_db_handle, errors::{
         RelationshipCreationError, RelationshipCreationFailure, VertexCreationError, VertexCreationFailure
     }, objects::{
         objects::Object, relationship::*, vertex::*
     }, types::{
         RelationshipId, VertexId
-    }, 
-    DB
+    }
 };
 use crate::{RELATIONSHIP_BYTE_LENGTH, VERTEX_BYTE_LENGTH};
 
@@ -44,7 +43,7 @@ pub fn read_relationship_locked (db_handle: &DB, rel_id: RelationshipId) -> Resu
     let mut buf = [0_u8; RELATIONSHIP_BYTE_LENGTH];
     let offset = RelationshipFile::get_offset_rel(rel_id);
     println!("Reading relationship @{offset}");
-    db_lock.f_rel.file.read_exact_at(&mut buf, offset).unwrap();
+    db_lock.f_rel.file.read_exact_at(&mut buf, offset)?;
     println!("{:?}", buf);
     let r = Relationship::from_bytes(&buf, rel_id)?;
     Ok(r)
@@ -95,3 +94,28 @@ fn vertices_from_bytes (buffer: &[u8; VERTEX_PAGE_LENGTH], start_pos: u64, cap: 
 
 
 
+pub fn read_all_relationships (db_handle: &DB) -> Result<Vec<Relationship>, RelationshipCreationError> {
+    let mut rels: Vec<Relationship> = vec![];
+    let mut id: RelationshipId = 0;
+    loop {
+        if let Some(rel) = db_handle.get_relationship(id){
+            rels.push(rel);
+        } else {
+            return Ok(rels);
+        }
+        id += 1;
+    }
+}
+
+
+
+fn rels_from_bytes (buffer: &[u8; RELATIONSHIP_PAGE_LENGTH], start_pos: u64, cap: usize) -> Result<Vec<Relationship>, RelationshipCreationError> {
+    let mut rels: Vec<Relationship> = vec![];
+    for i in (0..cap).step_by(RELATIONSHIP_BYTE_LENGTH) {
+        let id = ((start_pos + i as u64 - START_RELATIONSHIPS as u64) / RELATIONSHIP_BYTE_LENGTH as u64) as RelationshipId;
+        let bytes = &buffer[i..=i+RELATIONSHIP_BYTE_LENGTH];
+        let new_rel = Relationship::from_bytes(bytes, id)?;
+        rels.push(new_rel);
+    }
+    Ok(rels)
+}
