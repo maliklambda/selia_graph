@@ -10,14 +10,20 @@ use crate::{
 };
 
 
+/*
+* This type takes a VertexId as a parameter at creation.
+* It finds the Vertex from it's Id. 
+* It then grabs the first relationship associated with this vertex (this would be vertex.first_rel).
+* It then iterates over every relationship associated with this vertex until it reaches the first one again. 
+*/ 
 pub struct RelationshipIterator <'a> {
-    pub db_handle: &'a DB,
+    db_handle: &'a DB,
     // state of first relationship needs to be stored, to know when the end of the list is reached
     // Option is used to not change iteration on very first element
-    pub searched_vertex_id: VertexId,
-    pub start_rel_id: Option<RelationshipId>, 
-    pub next_rel_id: RelationshipId,
-    pub direction: IterDirection, // keep track of which way to iterate
+    searched_vertex_id: VertexId,
+    start_rel_id: Option<RelationshipId>, 
+    next_rel_id: RelationshipId,
+    direction: IterDirection, // keep track of which way to iterate
 }
 
 impl <'a> RelationshipIterator <'a> {
@@ -124,5 +130,6 @@ impl Iterator for NodeIterator <'_> {
         None
     }
 }
+
 
 

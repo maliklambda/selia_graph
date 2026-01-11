@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::{
     DB, errors::{
         RelationshipCreationError, VertexCreationError
@@ -10,12 +8,13 @@ use crate::{
             add_new_node, add_new_relationship, write_relationship_locked, write_vertex_locked
         }
     }, objects::{
-        iterator::RelationshipIterator, relationship::{
+        relationship::{
             Relationship, RelationshipFile
         }, vertex::Vertex
     }, types::{
         RelationshipId, VertexId,
-    }
+    }, 
+    iterator::relationship_iterator::*
 };
 
 
@@ -130,6 +129,19 @@ fn inner_dfs (db_handle: &DB, node: VertexId, visited: &mut Vec<VertexId>, stack
     for n in neighbors {
         inner_dfs(db_handle, n, visited, stack);
     }
+}
+
+
+
+pub fn bfs (db_handle: &DB, start_id: VertexId) -> Vec<VertexId> {
+    let mut visited: Vec<VertexId> = vec![];
+    println!("\n\n\nStarting BFS");
+    inner_bfs(db_handle, start_id, &mut visited);
+    visited
+}
+
+
+fn inner_bfs (db_handle: &DB, node: VertexId, visited: &mut Vec<VertexId>) {
 }
 
 

@@ -1,3 +1,5 @@
+use crate::iterator::dfs_iterator::DfsIterator;
+use crate::iterator::relationship_iterator::RelationshipIterator;
 use crate::types::*;
 use std::sync::Arc;
 use crate::methods::*;
@@ -72,8 +74,17 @@ impl DB {
         get_neighbors(self, node_id)
     }
 
-    pub fn dfs (&self, start_id: VertexId) -> Vec<VertexId> {
-        dfs(self, start_id)
+    pub fn rel_iter (&self, start_id: VertexId) -> RelationshipIterator {
+        RelationshipIterator::new(self, start_id)
+    }
+
+    pub fn dfs (&self, start_id: VertexId) -> impl Iterator <Item=VertexId> {
+        DfsIterator::new(self, start_id)
+    }
+
+
+    pub fn bfs (&self, start_id: VertexId) -> Vec<VertexId> {
+        bfs(self, start_id)
     }
 
 
