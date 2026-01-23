@@ -5,7 +5,7 @@
 */
 
 pub mod lengths {
-    use crate::{base_types::{PropertyId, RelationshipId}, constants::sys::PAGE_SIZE};
+    use crate::{base_types::{PropertyId, RelationshipId, TypeID}, constants::sys::PAGE_SIZE};
 
     const ID_BYTE_SIZE: usize = 4;
     pub const BYTE_LENGTH: usize = 8;
@@ -14,13 +14,13 @@ pub mod lengths {
     // relationships
     pub const RELATIONSHIP_BYTE_LENGTH: usize = 33;
     pub const START_RELATIONSHIPS: usize = 0;
-    pub const RELATIONSHIP_NULL_ID: RelationshipId = u32::MAX;
+    pub const RELATIONSHIP_NULL_ID: RelationshipId = RelationshipId::MAX;
     pub const RELATIONSHIP_PAGE_LENGTH: usize 
         = (PAGE_SIZE / RELATIONSHIP_BYTE_LENGTH) * RELATIONSHIP_BYTE_LENGTH; 
         // largest number that fits into PAGE_SIZE for which % RELATIONSHIP_BYTE_LENGTH == 0
 
     // vertices
-    pub const VERTEX_BYTE_LENGTH: usize = 9;
+    pub const VERTEX_BYTE_LENGTH: usize = 13;
     pub const START_VERTICES: usize = 0;
     pub const VERTEX_PAGE_LENGTH: usize 
         = (PAGE_SIZE / VERTEX_BYTE_LENGTH) * VERTEX_BYTE_LENGTH; 
@@ -28,7 +28,7 @@ pub mod lengths {
 
     // properties
     pub const START_PROPERTIES: usize = 0;
-    pub const PROPERTY_NULL_ID: PropertyId = u32::MAX;
+    pub const PROPERTY_NULL_ID: PropertyId = PropertyId::MAX;
 
     // types
     pub const START_TYPES: usize = PAGE_SIZE * 2;
@@ -38,6 +38,7 @@ pub mod lengths {
     pub const TYPE_NAME_LENGTH: usize 
         = TYPE_REF_BYTE_LENGTH - ID_BYTE_SIZE - TYPE_CONSTRAINTS_LENGTH_BYTE_LEN;
     pub const TYPE_OFFSET_MR_ID: usize = 24;
+    pub const TYPE_NULL_ID: TypeID = TypeID::MAX;
         // type_ref = type_name + ptr_to_constraints (ID)
 }
 

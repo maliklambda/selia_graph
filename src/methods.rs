@@ -1,5 +1,7 @@
 use crate::{
-    DB, errors::{
+    DB, base_types::{
+        RelationshipId, TypeID, VertexId
+    }, errors::{
         RelationshipCreationError, VertexCreationError
     }, io::{
         read::{
@@ -7,19 +9,16 @@ use crate::{
         }, write::{
             add_new_node, add_new_relationship, write_relationship_locked, write_vertex_locked
         }
-    }, objects::{
+    }, iterator::relationship_iterator::*, objects::{
         relationship::{
             Relationship, RelationshipFile
         }, vertex::Vertex
-    }, base_types::{
-        RelationshipId, VertexId,
-    }, 
-    iterator::relationship_iterator::*
+    }
 };
 
 
-pub fn add_node (db_handle: &DB, properties: &str) -> Result<(), VertexCreationError> {
-    add_new_node(db_handle, properties)
+pub fn add_node (db_handle: &DB, node_type: TypeID, properties: &str) -> Result<VertexId, VertexCreationError> {
+    add_new_node(db_handle, node_type, properties)
 }
 
 
@@ -46,7 +45,8 @@ pub fn get_all_relationships (db_handle: &DB) -> Vec<Relationship> {
 
 pub fn update_node (db_handle: &DB, node_id: VertexId, mut new_node: Vertex) -> Result<(), VertexCreationError> {
     new_node.id = node_id;
-    write_vertex_locked(db_handle, new_node)
+    write_vertex_locked(db_handle, new_node)?;
+    Ok(())
 }
 
 

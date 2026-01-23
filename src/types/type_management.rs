@@ -10,7 +10,7 @@ use std::sync::atomic::Ordering;
 
 use crate::base_types::ConstraintId;
 use crate::base_types::ID;
-use crate::base_types::TypeId;
+use crate::base_types::TypeID;
 use crate::constants::lengths::BYTE_LENGTH;
 use crate::constants::lengths::BobjLen;
 use crate::constants::lengths::START_TYPE_CONSTRAINTS;
@@ -53,7 +53,7 @@ impl TypeFile {
         )
     }
 
-    pub fn get_type (&mut self, type_id: TypeId) -> Result<TypeRef, String> {
+    pub fn get_type (&mut self, type_id: TypeID) -> Result<TypeRef, String> {
         self.file.seek(TypeFile::get_type_offset(type_id))
             .map_err(|err| format!("IO-Error: {err}"))?;
         let mut buf = [0u8; TYPE_REF_BYTE_LENGTH];
@@ -64,10 +64,10 @@ impl TypeFile {
     }
 
 
-    pub fn add_type (&mut self, name: &str, constraints: Constraints) -> Result<(), String> {
+    pub fn add_type (&mut self, name: &str, constraints: Constraints) -> Result<TypeID, String> {
         // check that type does not exist already
         if self.find_type_name(name).is_some() {
-            return Err("Type '{name}' already exists".to_string());
+            return Err(format!("Type '{name}' already exists"));
         }
 
         if self.mr_id.load(Ordering::Relaxed) >= MAX_TYPE_IDS as u32 {
@@ -88,14 +88,15 @@ impl TypeFile {
         let tr = TypeRef::new(name.to_owned(), Some(constraints), None);
         let tr_bytes = tr.to_bytes(constraint_id as ID, constraints_bytes_len);
         println!("Writing these typeref bytes: {:?}", tr_bytes);
-        assert!(self.mr_id.load(Ordering::Relaxed) < START_TYPE_CONSTRAINTS as u32);
+        let mr_id = self.mr_id.load(Ordering::Relaxed);
+        assert!(mr_id < START_TYPE_CONSTRAINTS as u32);
         self.file.write_all_at(&tr_bytes, self.get_offset_last_id())
             .map_err(|err| format!("IO-Error: {err}"))?;
         self.increment_mr_id();
-        Ok(())
+        Ok(mr_id)
     }
 
-pub fn find_type_name (&self, type_name: &str) -> Option<(TypeRef, TypeId)> {
+pub fn find_type_name (&self, type_name: &str) -> Option<(TypeRef, TypeID)> {
         let mut buffer = [0_u8; PAGE_SIZE];
         let mut cur_pos = START_TYPES as u64;
         while cur_pos < self.get_offset_last_id()
@@ -127,7 +128,7 @@ pub fn find_type_name (&self, type_name: &str) -> Option<(TypeRef, TypeId)> {
 
     fn type_refs_from_buf_pgs (&self, buf_pgs: [u8; PAGE_SIZE]) -> Vec<TypeRef> {
         buf_pgs.chunks(TYPE_REF_BYTE_LENGTH)
-            .into_iter().map(|buf| {
+            .map(|buf| {
                 // unwrap is fine here because previously called chunks() method sets correct size of array
                 TypeRef::from_bytes(buf.try_into().unwrap())
                     .unwrap()
@@ -135,7 +136,7 @@ pub fn find_type_name (&self, type_name: &str) -> Option<(TypeRef, TypeId)> {
         ).collect()
     }
 
-    fn get_offset_from_type_id (type_id: TypeId) -> u64 {
+    fn get_offset_from_type_id (type_id: TypeID) -> u64 {
         (START_TYPES + (type_id as usize * TYPE_REF_BYTE_LENGTH)) as u64
     }
 
@@ -154,7 +155,7 @@ pub fn find_type_name (&self, type_name: &str) -> Option<(TypeRef, TypeId)> {
         Constraints::from_bytes(buf)
     }
 
-    fn get_type_offset (type_id: TypeId) -> SeekFrom {
+    fn get_type_offset (type_id: TypeID) -> SeekFrom {
         SeekFrom::Start(
             (START_TYPES + 
                 (type_id as usize * TYPE_REF_BYTE_LENGTH)

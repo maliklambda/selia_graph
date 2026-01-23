@@ -7,7 +7,7 @@ use crate::errors::{
     VertexCreationFailure,
     VertexCreationError
 };
-use crate::base_types::VertexId;
+use crate::base_types::{TypeID, VertexId};
 use crate::DB;
 use crate::db::db::lock_db_handle_mut;
 
@@ -18,13 +18,13 @@ use crate::objects::{
 use crate::io::update_ptrs::update_existing_rel_ptrs_2;
 
 
-pub fn write_vertex_locked (db_handle: &DB, v: Vertex) -> Result<(), VertexCreationError> {
+pub fn write_vertex_locked (db_handle: &DB, v: Vertex) -> Result<VertexId, VertexCreationError> {
     let db_lock = lock_db_handle_mut(db_handle)
         .ok_or(VertexCreationError::new("Db lock (rw) failed", VertexCreationFailure::DbLock)
     )?;
     let offset = VertexFile::get_offset_vert(v.id);
     db_lock.f_vert.file.write_all_at(v.vertex.to_bytes(), offset)?;
-    Ok(())
+    Ok(v.id)
 }
 
 
@@ -83,7 +83,7 @@ pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex:
 
 
 
-pub fn add_new_node (db_handle: &DB, properties: &str) -> Result<(), VertexCreationError> {
+pub fn add_new_node (db_handle: &DB, node_type: TypeID, properties: &str) -> Result<VertexId, VertexCreationError> {
     //
     // parse properties (&str to bson)
 
@@ -91,7 +91,7 @@ pub fn add_new_node (db_handle: &DB, properties: &str) -> Result<(), VertexCreat
     let new_id = VertexFile::get_first_available_id(db_handle).unwrap();
 
     // create new vertex
-    let v = Vertex::new(new_id, FileVertex::new(true, None, None)); // add property reference
+    let v = Vertex::new(new_id, FileVertex::new(true, None, node_type, None)); // add property reference
     //write new node to file
     write_vertex_locked(db_handle, v)
 }

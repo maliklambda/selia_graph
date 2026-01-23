@@ -25,8 +25,8 @@ impl DB {
         get_node(self, node_id)
     }
 
-    pub fn add_node (&self, properties: &str) -> Result<(), VertexCreationError> {
-        add_node(self, properties)
+    pub fn add_node (&self, node_type: TypeID, properties: &str) -> Result<VertexId, VertexCreationError> {
+        add_node(self, node_type, properties)
     }
 
     pub fn add_relationship (&self, start_vertex: VertexId, end_vertex: VertexId, properties: &str) -> Result<(), RelationshipCreationError> {
@@ -37,14 +37,14 @@ impl DB {
         get_all_nodes(self)
     }
 
-    pub fn add_type (&self, type_name: &str, constraints: Constraints) -> Result<(), String> {
+    pub fn add_type (&self, type_name: &str, constraints: Constraints) -> Result<TypeID, String> {
         let mut lock = self.db.write().map_err(|_| "Failed DB write lock.")?;
-        lock.f_tp.add_type(type_name, constraints).map_err(|err| format!("Failed to add type: {err}"))?;
+        let new_type_id = lock.f_tp.add_type(type_name, constraints).map_err(|err| format!("Failed to add type: {err}"))?;
         println!("Wrote type {type_name} to file.");
-        Ok(())
+        Ok(new_type_id)
     }
 
-    pub fn get_type (&self, type_id: TypeId) -> Result <TypeRef, String> {
+    pub fn get_type (&self, type_id: TypeID) -> Result <TypeRef, String> {
         let mut lock = self.db.write().map_err(|_| "Failed DB read lock")?;
         lock.f_tp.get_type(type_id)
     }

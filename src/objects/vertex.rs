@@ -3,7 +3,7 @@ use std::{
         OpenOptions
     }, path::{Path, PathBuf}, slice
 };
-use crate::{constants::lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, VERTEX_BYTE_LENGTH}, db::db::lock_db_handle_mut};
+use crate::{constants::lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, TYPE_NULL_ID, VERTEX_BYTE_LENGTH}, db::db::lock_db_handle_mut};
 use crate::errors::*;
 use crate::base_types::*;
 use crate::objects::objects::Object;
@@ -29,7 +29,7 @@ impl Vertex {
     }
 
     pub fn default () -> Vertex {
-        Vertex::new(0, FileVertex::new(true, None, None))
+        Vertex::new(0, FileVertex::new(true, None, TYPE_NULL_ID, None))
     }
 
     pub fn from_file_vertex (fv: &FileVertex, id: VertexId) -> Vertex {
@@ -85,16 +85,18 @@ impl Object for Vertex {
 pub struct FileVertex {
     pub first_rel: RelationshipId,
     pub first_prop: PropertyId,
+    pub node_type: TypeID,
     pub in_usage: bool,
 }
 
 
 impl FileVertex {
-    pub fn new (in_usage: bool, first_rel: Option<RelationshipId>, first_prop: Option<PropertyId>) -> Self {
+    pub fn new (in_usage: bool, first_rel: Option<RelationshipId>, node_type: TypeID, first_prop: Option<PropertyId>) -> Self {
         FileVertex {
-            in_usage, 
             first_rel: first_rel.unwrap_or(RELATIONSHIP_NULL_ID), 
             first_prop: first_prop.unwrap_or(RELATIONSHIP_NULL_ID),
+            node_type,
+            in_usage, 
         }
     }
 
