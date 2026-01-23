@@ -143,6 +143,7 @@ impl From<CreationFailureReason> for VertexCreationFailure {
 pub enum VertexCreationFailure {
     WrongByteLength,
     IoFailure,
+    InvalidJson,
     DbLock,
     Other,
 }

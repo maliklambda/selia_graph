@@ -47,11 +47,12 @@ pub mod sys {
 }
 
 pub mod limits {
-    use crate::constants::lengths::{START_TYPE_CONSTRAINTS, TYPE_REF_BYTE_LENGTH};
+    use crate::constants::lengths::{BobjLen, START_TYPE_CONSTRAINTS, TYPE_REF_BYTE_LENGTH};
 
     pub const MAX_CONFIG_FILE_SIZE: u16 = 1000;
     pub const MAX_TYPE_IDS: usize = START_TYPE_CONSTRAINTS / TYPE_REF_BYTE_LENGTH;
 
+    pub const MAX_BOBJ_SIZE: u16 = BobjLen::MAX;
 }
 
 pub mod paths {

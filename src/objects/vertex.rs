@@ -3,7 +3,7 @@ use std::{
         OpenOptions
     }, path::{Path, PathBuf}, slice
 };
-use crate::{constants::lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, TYPE_NULL_ID, VERTEX_BYTE_LENGTH}, db::db::lock_db_handle_mut};
+use crate::{constants::lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, TYPE_NULL_ID, VERTEX_BYTE_LENGTH, PROPERTY_NULL_ID}, db::db::lock_db_handle_mut};
 use crate::errors::*;
 use crate::base_types::*;
 use crate::objects::objects::Object;
@@ -84,17 +84,17 @@ impl Object for Vertex {
 #[repr(packed)]
 pub struct FileVertex {
     pub first_rel: RelationshipId,
-    pub first_prop: PropertyId,
+    pub properties: PropertyId,
     pub node_type: TypeID,
     pub in_usage: bool,
 }
 
 
 impl FileVertex {
-    pub fn new (in_usage: bool, first_rel: Option<RelationshipId>, node_type: TypeID, first_prop: Option<PropertyId>) -> Self {
+    pub fn new (in_usage: bool, first_rel: Option<RelationshipId>, node_type: TypeID, properties: Option<PropertyId>) -> Self {
         FileVertex {
             first_rel: first_rel.unwrap_or(RELATIONSHIP_NULL_ID), 
-            first_prop: first_prop.unwrap_or(RELATIONSHIP_NULL_ID),
+            properties: properties.unwrap_or(PROPERTY_NULL_ID),
             node_type,
             in_usage, 
         }

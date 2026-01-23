@@ -1,15 +1,14 @@
 use std::{fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, os::unix::fs::FileExt};
 
 
-use crate::{base_types::ID, constants::{self, lengths::{BYTE_LENGTH, BobjLen, PROPERTY_NULL_ID}, limits::MAX_BOBJ_SIZE}, types::type_management::TypeRef};
+use crate::{base_types::ID, constants::{self, lengths::{BYTE_LENGTH, BobjLen}, limits::MAX_BOBJ_SIZE}, types::type_management::TypeRef};
 
 
 pub type PropertyId = ID;
 
-#[derive(Debug)]
-pub struct Property {
-    pub json_str: Option<String>,
-    pub json_val: Option<serde_json::Value>,
+struct Property {
+    json_str: Option<String>,
+    json_val: Option<serde_json::Value>,
 }
 
 impl Property {
@@ -54,12 +53,11 @@ impl PropertyFile {
         // Parse json String => return Error if invalid
         let v: serde_json::Value = serde_json::from_str(property_str)
             .map_err(|_| "Invalid JSON")?;
-        println!("Valid JSON");
 
         // Check if all constraints are kept 
         // => e.g. Type has required field "start" => json_obj must include "start" at top_level
         if !assert_value_matches_type_reqs(v, node_type) {
-            todo!("JSON value provided does not meet the requirements for type.");
+            todo!("Handle invalid JSON string");
         }
 
         // str to Binary Object
@@ -71,38 +69,24 @@ impl PropertyFile {
 
         let mut buffer = b_len.to_ne_bytes().to_vec();
         buffer.extend_from_slice(b_json);
-        println!("Writing this property buffer (length = {}): {:?}", buffer.len(), buffer);
 
         // write buffer
-        self.file.seek(SeekFrom::End(0))
-            .map_err(|err| format!("IO-Error: {err}"))?;
-        let new_prop_id = self.file.stream_position()
-            .map_err(|err| format!("IO-Error: {err}"))? as u32;
-        self.file.write_all(&buffer)
-            .map_err(|err| format!("IO-Error: {err}"))?;
-        self.file.seek(SeekFrom::End(0))
-            .map_err(|err| format!("IO-Error: {err}"))?;
-        let end = self.file.stream_position()
-            .map_err(|err| format!("IO-Error: {err}"))? as u32;
-        println!("end = {end}");
+        self.file.seek(SeekFrom::End(0))?;
+        let new_prop_id = self.file.stream_position()? as u32;
+        self.file.write_all(&buffer)?;
 
         Ok(new_prop_id)
     }
 
     pub fn read_property (&mut self, prop_id: PropertyId) -> Result<Property, std::io::Error> {
-        assert_ne!(prop_id, PROPERTY_NULL_ID);
         // read size of Bobj
-        const BUF_LEN: usize = (BobjLen::BITS/(BYTE_LENGTH as u32)) as usize;
-        println!("Reading {BUF_LEN} many bytes for len @ {prop_id}");
-        let mut buf = [0_u8; BUF_LEN];
+        let mut buf = [0_u8; (BobjLen::BITS/(BYTE_LENGTH as u32)) as usize];
         self.file.read_exact_at(&mut buf, prop_id as u64)?;
         let size = BobjLen::from_ne_bytes(buf);
-        println!("Reading {size} many bytes");
 
         // read Bobj
         let mut buf = vec![0_u8; size as usize];
-        self.file.read_exact_at(&mut buf, prop_id as u64 + BUF_LEN as u64)?;
-        println!("Read this property buffer from file: {:?}", buf);
+        self.file.read_exact(&mut buf)?;
         let json_val = Some(serde_json::from_slice::<serde_json::Value>(&buf)?);
 
         Ok(Property { json_str: None, json_val })

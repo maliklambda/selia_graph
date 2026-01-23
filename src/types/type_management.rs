@@ -63,6 +63,11 @@ impl TypeFile {
         TypeRef::from_bytes(buf)
     }
 
+    pub fn get_type_full (&mut self, type_id: TypeID) -> Result<TypeRef, String> {
+        let mut tr = self.get_type(type_id)?;
+        tr.constraints = Some(self.get_constraints(tr.constraints_info.unwrap())?);
+        Ok(tr)
+    }
 
     pub fn add_type (&mut self, name: &str, constraints: Constraints) -> Result<TypeID, String> {
         // check that type does not exist already
