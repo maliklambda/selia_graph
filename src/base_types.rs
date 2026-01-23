@@ -18,5 +18,8 @@ pub type VertexId = ID;
 // properties
 pub type PropertyId = ID;
 
+// types
+pub type TypeId = ID;
+pub type ConstraintId = ID;
 
 

@@ -11,7 +11,7 @@ use crate::{
         relationship::{
             Relationship, RelationshipFile
         }, vertex::Vertex
-    }, types::{
+    }, base_types::{
         RelationshipId, VertexId,
     }, 
     iterator::relationship_iterator::*

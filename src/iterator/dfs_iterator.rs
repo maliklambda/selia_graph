@@ -1,5 +1,4 @@
-use crate::errors::VertexCreationError;
-use crate::types::VertexId;
+use crate::base_types::VertexId;
 use crate::DB;
 
 

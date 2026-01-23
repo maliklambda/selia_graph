@@ -1,4 +1,4 @@
-use crate::types::*;
+use crate::base_types::*;
 
 pub trait Object {
     fn to_bytes (&self) -> &[u8];

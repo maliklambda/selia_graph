@@ -1,6 +1,7 @@
-use crate::{objects::{property::PropertyFile, relationship::RelationshipFile, vertex::{VertexFile}}};
+use crate::{db::init_files::init_type_file, objects::{property::PropertyFile, relationship::RelationshipFile, vertex::VertexFile}};
+use crate::types::type_management::TypeFile;
 use crate::constants::{paths::*, limits::*};
-use crate::types::*;
+use crate::base_types::*;
 use std::{fs::{File, OpenOptions}, sync::{Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard}};
 use std::path::{Path, PathBuf};
 use std::fs;
@@ -18,14 +19,14 @@ impl GraphDB {
     pub fn new (db_name: &str, version: Version) -> Result<Self, String> {
         let path = &db_root_path(db_name);
         if path.exists() {
-            println!("Initializing GraphDB ({db_name}) from file");
+            println!("Initializing GraphDB '{db_name}' from file");
             return Ok(Self::init_from_file(db_name, version)
-                .unwrap_or_else(|_| panic!("Fatal: Failed to init DB ({db_name} from file.)"))
+                .unwrap_or_else(|err| panic!("Fatal: Failed to init DB '{db_name}' from file: {err}"))
             );
         }
-        println!("Did not find {db_name} directory. Initializing Graph DB ({db_name}) from scratch");
+        println!("Did not find {db_name} directory. Initializing Graph DB '{db_name}' from scratch");
         Ok(Self::init_from_scratch(db_name, version)
-            .unwrap_or_else(|_| panic!("Fatal: Failed to init DB ({db_name} from scratch.)"))
+            .unwrap_or_else(|err| panic!("Fatal: Failed to init DB '{db_name}' from scratch: {err}"))
         )
     }
 
@@ -52,13 +53,16 @@ impl GraphDB {
         p_path.push(PROPERTY_FILE_NAME);
         fs::File::create(&p_path).unwrap();
 
+        // types files
+        let t_path = init_type_file(&root_path)?;
+
         // index files
         // todo!("touch index files");
         
-        // others (caching, transactions, tmp, types ...)
+        // others (caching, transactions, tmp, ...)
         // todo!("touch other files");
 
-        let db = DBInnerHandle::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path)
+        let db = DBInnerHandle::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path, &t_path)
             .expect("Fatal: failed DB_Inner-initialization")));
         println!("Finished DB initialization from scratch");
         Ok(GraphDB {
@@ -71,6 +75,8 @@ impl GraphDB {
 
     fn init_from_file (db_name: &str, version: Version) -> Result<Self, String> {
         let config = ConfigHandle::new(db_name, version).unwrap();
+        // It is planned to store all constants in config (to enable versioning)
+        // Example: instead of "crate::constants::VERTEX_FILE_NAME" you would do "config.VERTEX_FILE_NAME"
 
         let root_path = db_root_path(db_name);
         if !root_path.exists() {
@@ -98,8 +104,15 @@ impl GraphDB {
             return Err(format!("Property file ({:?}) does not exist", p_path));
         }
 
+        // type files
+        let mut t_path = root_path.clone();
+        t_path.push(TYPE_FILE_NAME);
+        if !t_path.exists() {
+            return Err(format!("Types file ({:?}) does not exist", t_path));
+        }
 
-        let db = DBInnerHandle::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path)
+
+        let db = DBInnerHandle::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path, &t_path)
             .expect("Fatal: failed DB_Inner-initialization")));
         println!("Finished DB initialization from files");
         Ok(GraphDB {
@@ -133,7 +146,7 @@ impl ConfigHandle {
         let config_path = config_path(db_name);
         // check if config path exists. If not, create it.
         if config_path.exists(){
-
+            println!("Reading config file");
         } else {
             println!("Creating empty config file");
             fs::File::create(&config_path).unwrap();
@@ -163,10 +176,6 @@ impl ConfigHandle {
             f_config,
             config_path: config_path.to_path_buf(),
         })
-    }
-
-    pub fn from_file (path: &Path) -> Result<Self, String> {
-        todo!("Return config handle from existing config file");
     }
 
 
@@ -215,15 +224,17 @@ pub struct DBInner {
     pub f_rel: RelationshipFile,
     pub f_vert: VertexFile,
     pub f_prop: PropertyFile,
+    pub f_tp: TypeFile,
 }
 
 
 impl DBInner {
-    pub fn new (f_rel_path: &Path, f_vert_path: &Path, f_prop_path: &Path) -> Result<Self, std::io::Error> {
+    pub fn new (f_rel_path: &Path, f_vert_path: &Path, f_prop_path: &Path, f_tp_path: &Path) -> Result<Self, std::io::Error> {
         let f_rel = RelationshipFile::new(f_rel_path)?;
         let f_vert = VertexFile::new(f_vert_path)?;
         let f_prop = PropertyFile::new(f_prop_path)?;
-        Ok (DBInner { f_rel, f_vert, f_prop })
+        let f_tp = TypeFile::new(f_tp_path)?;
+        Ok (DBInner { f_rel, f_vert, f_prop, f_tp })
     }
 
 }

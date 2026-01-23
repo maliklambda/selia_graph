@@ -1,6 +1,9 @@
 use crate::iterator::dfs_iterator::DfsIterator;
 use crate::iterator::relationship_iterator::RelationshipIterator;
-use crate::types::*;
+use crate::base_types::*;
+use crate::types::type_management::ConstraintInfo;
+use crate::types::type_management::Constraints;
+use crate::types::type_management::TypeRef;
 use std::sync::Arc;
 use crate::methods::*;
 use crate::errors::*;
@@ -34,6 +37,22 @@ impl DB {
         get_all_nodes(self)
     }
 
+    pub fn add_type (&self, type_name: &str, constraints: Constraints) -> Result<(), String> {
+        let mut lock = self.db.write().map_err(|_| "Failed DB write lock.")?;
+        lock.f_tp.add_type(type_name, constraints).map_err(|err| format!("Failed to add type: {err}"))?;
+        println!("Wrote type {type_name} to file.");
+        Ok(())
+    }
+
+    pub fn get_type (&self, type_id: TypeId) -> Result <TypeRef, String> {
+        let mut lock = self.db.write().map_err(|_| "Failed DB read lock")?;
+        lock.f_tp.get_type(type_id)
+    }
+
+    pub fn get_constraints (&self, constraints_info: ConstraintInfo) -> Result <Constraints, String> {
+        let lock = self.db.write().map_err(|_| "Failed DB read lock")?;
+        lock.f_tp.get_constraints(constraints_info)
+    }
     pub fn get_all_relationships (&self) -> Vec<Relationship> {
         get_all_relationships(self)
     }

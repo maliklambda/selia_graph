@@ -5,7 +5,7 @@ use std::{
 };
 use crate::{constants::lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, VERTEX_BYTE_LENGTH}, db::db::lock_db_handle_mut};
 use crate::errors::*;
-use crate::types::*;
+use crate::base_types::*;
 use crate::objects::objects::Object;
 use crate::io::read::read_relationship_locked;
 

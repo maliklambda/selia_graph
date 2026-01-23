@@ -2,7 +2,7 @@ use crate::{
     constants::lengths::RELATIONSHIP_NULL_ID, db::db::lock_db_handle_mut, objects::{
         relationship::Relationship,
         vertex::Vertex,
-    }, types::{
+    }, base_types::{
         RelationshipId,
         VertexId,
     },

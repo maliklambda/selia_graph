@@ -4,7 +4,7 @@ use crate::{
         RelationshipCreationError, RelationshipCreationFailure, VertexCreationError, VertexCreationFailure
     }, objects::{
         objects::Object, relationship::*, vertex::*
-    }, types::{
+    }, base_types::{
         RelationshipId, VertexId
     }
 };

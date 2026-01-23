@@ -7,7 +7,7 @@ use crate::errors::{
     VertexCreationFailure,
     VertexCreationError
 };
-use crate::types::VertexId;
+use crate::base_types::VertexId;
 use crate::DB;
 use crate::db::db::lock_db_handle_mut;
 

@@ -1,6 +1,6 @@
 use std::fs::OpenOptions;
 
-use crate::{constants, types::ID};
+use crate::{constants, base_types::ID};
 
 
 pub type PropertyId = ID;

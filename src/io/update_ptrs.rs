@@ -1,7 +1,7 @@
 use crate::DB;
 use crate::objects::relationship::*;
 use crate::objects::vertex::*;
-use crate::types::*;
+use crate::base_types::*;
 use crate::constants::lengths::RELATIONSHIP_NULL_ID;
 
 

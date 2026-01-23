@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::constants::lengths::{START_RELATIONSHIPS, RELATIONSHIP_BYTE_LENGTH};
 use crate::db::db::lock_db_handle_mut;
 use crate::objects::free_chunks::RelationshipFreeChunks;
-use crate::types::{
+use crate::base_types::{
     RelationshipId, RelationshipType, VertexId
 };
 use crate::errors::*;
