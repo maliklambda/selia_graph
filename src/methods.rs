@@ -23,8 +23,8 @@ pub fn add_node (db_handle: &DB, node_type: TypeID, properties: &str) -> Result<
 
 
 
-pub fn add_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex: VertexId, properties: &str) -> Result<(), RelationshipCreationError> {
-    add_new_relationship(db_handle, start_vertex, end_vertex, properties)
+pub fn add_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex: VertexId, rel_type: TypeID, properties: &str) -> Result<RelationshipId, RelationshipCreationError> {
+    add_new_relationship(db_handle, start_vertex, end_vertex, rel_type, properties)
 }
 
 

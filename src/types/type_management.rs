@@ -232,6 +232,8 @@ impl TypeRef {
     }
 }
 
+// TODO: add type restraints to constraints => e.g. expected <name (String)>, <age (u8)>, ...
+// TODO: add indexed_fields
 #[derive(Debug, Clone)]
 pub struct Constraints {
     pub required_fields: Vec<String>,

@@ -42,7 +42,7 @@ impl Relationship {
             vertex_refs: RelationshipVertexRefs { 
                 start_vertex: 0, end_vertex: 0, start_prev: 0, start_next: 0, end_prev: 0, end_next: 0
             }, 
-            first_prop: 0, rel_type: 0, in_usage: true }
+            prop_id: 0, rel_type: 0, in_usage: true }
         }
     }
 
@@ -75,15 +75,15 @@ impl Object for Relationship {
 #[repr(packed)]
 pub struct FileRelationship {
     pub vertex_refs: RelationshipVertexRefs,
-    pub first_prop: PropertyId,
+    pub prop_id: PropertyId,
     pub rel_type: RelationshipType,
     pub in_usage: bool,
 }
 
 
 impl FileRelationship {
-    pub fn new (first_prop: PropertyId, rel_type: RelationshipType, in_usage: bool, vertex_refs: RelationshipVertexRefs) -> Self {
-        FileRelationship { vertex_refs, first_prop, rel_type, in_usage }
+    pub fn new (prop_id: PropertyId, rel_type: RelationshipType, in_usage: bool, vertex_refs: RelationshipVertexRefs) -> Self {
+        FileRelationship { vertex_refs, prop_id, rel_type, in_usage }
     }
 
 
@@ -92,7 +92,7 @@ impl FileRelationship {
     }
 
     pub fn props (&self) -> PropertyId {
-        self.first_prop
+        self.prop_id
     }
 }
 

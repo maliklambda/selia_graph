@@ -75,6 +75,7 @@ impl From<CreationFailureReason> for RelationshipCreationFailure {
 pub enum RelationshipCreationFailure {
     WrongByteLength,
     IoFailure,
+    InvalidJson,
     DbLock,
     ReadNullId,
     Other,

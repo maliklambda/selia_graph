@@ -7,7 +7,7 @@ use crate::errors::{
     VertexCreationFailure,
     VertexCreationError
 };
-use crate::base_types::{TypeID, VertexId};
+use crate::base_types::{RelationshipId, TypeID, VertexId};
 use crate::DB;
 use crate::db::db::lock_db_handle_mut;
 
@@ -55,7 +55,7 @@ pub fn write_relationship_locked (db_handle: &DB, r: Relationship) -> Result<(),
 }
 
 
-pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex: VertexId, properties: &str) -> Result<(), RelationshipCreationError> {
+pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex: VertexId, rel_type: TypeID, properties: &str) -> Result<RelationshipId, RelationshipCreationError> {
     let v_start = get_node(db_handle, start_vertex).unwrap();
     let (s_prev, s_next) = v_start.get_prev_next(db_handle).unwrap();
 
@@ -64,10 +64,26 @@ pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex:
 
     let new_rel_id = RelationshipFile::get_first_available_id(db_handle).unwrap();
 
+    // parse properties (&str to bson)
+    let new_prop_id = {
+        let mut lock = lock_db_handle_mut(db_handle).unwrap();
+        let node_type = lock.f_tp.get_type_full(rel_type)
+            .map_err(|_| RelationshipCreationError::new(
+                "Getting type from type_id failed", RelationshipCreationFailure::Other 
+            )
+        )?;
+        // write properties
+        lock.f_prop.add_property(properties, node_type)
+            .map_err(|err| 
+                if err.starts_with("Invalid JSON") { RelationshipCreationError::new(&err, RelationshipCreationFailure::InvalidJson) } 
+                else{ RelationshipCreationError::new(&format!("io error from properties: {err}"), RelationshipCreationFailure::IoFailure) }
+            )?
+    };
+
     let mut new_rel = Relationship {
         id: new_rel_id,
         rel: FileRelationship::new(
-            0, 0, true, RelationshipVertexRefs::new(start_vertex, end_vertex, s_prev, s_next, e_prev, e_next)
+            new_prop_id, rel_type, true, RelationshipVertexRefs::new(start_vertex, end_vertex, s_prev, s_next, e_prev, e_next)
         )
     };
 
@@ -78,7 +94,7 @@ pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex:
     println!("Writing this relationship to file: {:?}", new_rel);
     write_relationship_locked(db_handle, new_rel)?;
 
-    Ok(())
+    Ok(new_rel_id)
 }
 
 
@@ -93,6 +109,7 @@ pub fn add_new_node (db_handle: &DB, type_id: TypeID, properties: &str) -> Resul
                 "Getting type from type_id failed", VertexCreationFailure::Other
             )
         )?;
+        // write properties
         lock.f_prop.add_property(properties, node_type)
             .map_err(|err| 
                 if err.starts_with("Invalid JSON") { VertexCreationError::new(&err, VertexCreationFailure::InvalidJson) } 

@@ -30,8 +30,8 @@ impl DB {
         add_node(self, node_type, properties)
     }
 
-    pub fn add_relationship (&self, start_vertex: VertexId, end_vertex: VertexId, properties: &str) -> Result<(), RelationshipCreationError> {
-        add_relationship(self, start_vertex, end_vertex, properties)
+    pub fn add_relationship (&self, start_vertex: VertexId, end_vertex: VertexId, rel_type: TypeID, properties: &str) -> Result<RelationshipId, RelationshipCreationError> {
+        add_relationship(self, start_vertex, end_vertex, rel_type, properties)
     }
 
     pub fn get_all_nodes (&self) -> Vec<Vertex> {
