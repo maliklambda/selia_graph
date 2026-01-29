@@ -7,5 +7,9 @@ pub trait Object {
 }
 
 
+pub enum ObjectType {
+    Relationship,
+    Vertex
+}
 
 

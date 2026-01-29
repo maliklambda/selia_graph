@@ -13,6 +13,7 @@ use crate::base_types::ID;
 use crate::base_types::TypeID;
 use crate::constants::lengths::BYTE_LENGTH;
 use crate::constants::lengths::BobjLen;
+use crate::constants::lengths::INDEXED_FIELDS_BYTE_LEN;
 use crate::constants::lengths::START_TYPE_CONSTRAINTS;
 use crate::constants::lengths::START_TYPES;
 use crate::constants::lengths::TYPE_CONSTRAINTS_LENGTH_BYTE_LEN;
@@ -61,6 +62,14 @@ impl TypeFile {
             .map_err(|err| format!("IO-Error: {err}"))?;
         println!("Read these typeref bytes: {:?}", buf);
         TypeRef::from_bytes(buf)
+    }
+
+
+    pub fn get_type_by_str(&mut self, type_name: &str) -> Result<TypeRef, String> {
+        let (_, id) = self.find_type_name(type_name)
+            .ok_or(format!("Did not find type {type_name}"))?;
+        let tr_full = self.get_type_full(id)?;
+        Ok(tr_full)
     }
 
     pub fn get_type_full (&mut self, type_id: TypeID) -> Result<TypeRef, String> {
@@ -237,6 +246,7 @@ impl TypeRef {
 #[derive(Debug, Clone)]
 pub struct Constraints {
     pub required_fields: Vec<String>,
+    pub indexed_fields: Vec<IndexedFields>
 }
 
 
@@ -247,6 +257,12 @@ impl Constraints {
         // Separator between struct fields is \0 (so \0[1] after last string and separator \0[2])
         for val in self.required_fields.clone() {
             bytes.extend_from_slice(val.as_bytes());
+            bytes.push(b'\0');
+        }
+        bytes.push(b'\0');
+
+        for val in self.indexed_fields.clone() {
+            bytes.extend_from_slice(&val.as_bytes());
             bytes.push(b'\0');
         }
         bytes.push(b'\0');
@@ -276,9 +292,93 @@ impl Constraints {
         let required_fields: Vec<String> = values[0].iter()
             .map(|v| String::from_utf8(v.to_vec()).unwrap())
             .collect();
+        
+        let indexed_fields: Vec<IndexedFields> = values[1].iter()
+            .map(|v| {
+                // first two bytes for index in required_fields
+                let req_field_idx = u16::from_ne_bytes([v[0], v[1]]);
+                // next byte for type of indexed values
+                let field_type = IndexType::from_u8(v[2]);
+                IndexedFields { req_field_idx, field_type }
+            }).collect();
 
-        Ok(Constraints { required_fields })
+        Ok(Constraints { required_fields, indexed_fields })
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct IndexedFields {
+    pub req_field_idx: u16,
+    pub field_type: IndexType,
+}
+
+
+impl IndexedFields {
+    pub fn as_bytes(&self) -> [u8; INDEXED_FIELDS_BYTE_LEN] {
+        let b1 = self.req_field_idx.to_ne_bytes();
+        let b2 = (self.field_type.clone() as u8).to_ne_bytes();
+        let mut out = [0_u8; INDEXED_FIELDS_BYTE_LEN];
+        out[..=1].copy_from_slice(&b1);
+        out[2..].copy_from_slice(&b2);
+        out
+    }
+}
+
+
+#[repr(u8)]
+#[derive(Clone, Debug)]
+pub enum IndexType {
+    STRING = 0,
+    U32 = 1,
+    INVALIDTYPE = u8::MAX,
+}
+
+impl IndexType {
+    pub fn from_u8 (num: u8) -> Self {
+        match num {
+            0 => IndexType::STRING,
+            1 => IndexType::U32,
+            _ => IndexType::INVALIDTYPE,
+        }
+    }
+}
+
+impl std::fmt::Display for IndexType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", *self)
+    }
+}
+
+
+pub trait IndexAbleType: std::fmt::Display + Copy {
+    type IdxType;
+    fn to_index_type(&self) -> IndexType;
+    fn to_bytes(&self) -> Vec<u8>;
+    // fn from_bytes(v: Vec<u8>) -> Self;
+}
+
+
+impl IndexAbleType for &str {
+    type IdxType = Self;
+    fn to_index_type(&self) -> IndexType {
+        IndexType::STRING
+    }
+    fn to_bytes (&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
+    }
+}
+
+
+impl IndexAbleType for u32 {
+    type IdxType = Self;
+    fn to_index_type(&self) -> IndexType {
+        IndexType::U32
+    }
+    fn to_bytes (&self) -> Vec<u8> {
+        self.to_ne_bytes().to_vec()
+    }
+}
+
+
 
 

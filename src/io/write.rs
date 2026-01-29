@@ -23,6 +23,7 @@ pub fn write_vertex_locked (db_handle: &DB, v: Vertex) -> Result<VertexId, Verte
         .ok_or(VertexCreationError::new("Db lock (rw) failed", VertexCreationFailure::DbLock)
     )?;
     let offset = VertexFile::get_offset_vert(v.id);
+    println!("writing this vertex @{offset}: {:?}", v.vertex.to_bytes());
     db_lock.f_vert.file.write_all_at(v.vertex.to_bytes(), offset)?;
     Ok(v.id)
 }
@@ -118,7 +119,7 @@ pub fn add_new_node (db_handle: &DB, type_id: TypeID, properties: &str) -> Resul
     };
 
     // lock db_handle
-    let new_id = VertexFile::get_first_available_id(db_handle).unwrap();
+    let new_id = VertexFile::get_first_available_id_incr(db_handle).unwrap();
 
     // create new vertex
     let v = Vertex::new(new_id, FileVertex::new(true, None, type_id, Some(new_prop_id)));

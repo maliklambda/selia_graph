@@ -34,7 +34,7 @@ pub fn get_node (db_handle: &DB, node_id: VertexId) -> Result<Vertex, VertexCrea
 
 
 pub fn get_all_nodes (db_handle: &DB) -> Vec<Vertex> {
-    read_all_nodes(db_handle).unwrap()
+    read_all_nodes(db_handle)
 }
 
 

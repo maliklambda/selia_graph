@@ -5,7 +5,7 @@
 */
 
 pub mod lengths {
-    use crate::{base_types::{PropertyId, RelationshipId, TypeID}, constants::sys::PAGE_SIZE};
+    use crate::{base_types::{PropertyId, RelationshipId, TypeID}, constants::{limits::MAX_BTREE_NODES, sys::PAGE_SIZE}};
 
     const ID_BYTE_SIZE: usize = 4;
     pub const BYTE_LENGTH: usize = 8;
@@ -40,6 +40,10 @@ pub mod lengths {
     pub const TYPE_OFFSET_MR_ID: usize = 24;
     pub const TYPE_NULL_ID: TypeID = TypeID::MAX;
         // type_ref = type_name + ptr_to_constraints (ID)
+
+    // index
+    pub const INDEX_START_ENTRIES: usize = PAGE_SIZE * MAX_BTREE_NODES;
+    pub const INDEXED_FIELDS_BYTE_LEN: usize = 3;
 }
 
 pub mod sys {
@@ -53,6 +57,8 @@ pub mod limits {
     pub const MAX_TYPE_IDS: usize = START_TYPE_CONSTRAINTS / TYPE_REF_BYTE_LENGTH;
 
     pub const MAX_BOBJ_SIZE: u16 = BobjLen::MAX;
+
+    pub const MAX_BTREE_NODES: usize = 512;
 }
 
 pub mod paths {
@@ -65,10 +71,17 @@ pub mod paths {
     pub const RELATIONSHIP_FILE_NAME: &str = "relationship.db";
     pub const PROPERTY_FILE_NAME: &str = "properties.db";
     pub const TYPE_FILE_NAME: &str = "types.db";
+    pub const INDEX_FILE_PATH_SUFFIX: &str = ".idx";
 
     pub fn db_root_path (db_name: &str) -> PathBuf {
         let mut path = env::current_dir().expect("Failed to get current dir for db_root_path");
         path.push(format!("{db_name}{DB_ROOT_NAME_SUFFIX}"));
+        path
+    }
+
+    pub fn idx_file_path (db_name: &str, type_name: &str, property_name: &str) -> PathBuf {
+        let mut path = db_root_path(db_name);
+        path.push(format!("{type_name}_{property_name}{INDEX_FILE_PATH_SUFFIX}"));
         path
     }
 

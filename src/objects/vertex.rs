@@ -3,6 +3,7 @@ use std::{
         OpenOptions
     }, path::{Path, PathBuf}, slice
 };
+use std::sync::atomic::AtomicU32;
 use crate::{constants::lengths::{RELATIONSHIP_NULL_ID, START_VERTICES, TYPE_NULL_ID, VERTEX_BYTE_LENGTH, PROPERTY_NULL_ID}, db::db::lock_db_handle_mut};
 use crate::errors::*;
 use crate::base_types::*;
@@ -149,7 +150,7 @@ pub struct VertexFile {
     pub file: std::fs::File,
     pub file_path: PathBuf,
     pub start_vertices: usize,
-    pub first_available_id: VertexId,
+    pub first_available_id: AtomicU32,
     pub last_id: VertexId
 }
 
@@ -165,17 +166,15 @@ impl VertexFile {
             file, 
             file_path: file_path.to_path_buf(),
             start_vertices: START_VERTICES, 
-            first_available_id: 0,
+            first_available_id: 0.into(),
             last_id: 0 
         })
     }
 
 
-    pub fn get_first_available_id (db_handle: &DB) -> Option<VertexId> {
-        let mut lock = lock_db_handle_mut(db_handle)?;
-        let new_id = lock.f_vert.first_available_id;
-        lock.f_vert.first_available_id += 1;
-        Some(new_id)
+    pub fn get_first_available_id_incr (db_handle: &DB) -> Option<VertexId> {
+        let lock = lock_db_handle_mut(db_handle)?;
+        Some(lock.f_vert.first_available_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
     }
 
     pub fn get_offset_vert (vertex_id: VertexId) -> u64 {

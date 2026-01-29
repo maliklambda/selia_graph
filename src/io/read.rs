@@ -1,11 +1,11 @@
 use std::os::unix::fs::FileExt;
 use crate::{
-    DB, constants::lengths::{RELATIONSHIP_NULL_ID, RELATIONSHIP_PAGE_LENGTH, START_RELATIONSHIPS, START_VERTICES, VERTEX_PAGE_LENGTH}, db::db::lock_db_handle, errors::{
-        RelationshipCreationError, RelationshipCreationFailure, VertexCreationError, VertexCreationFailure
-    }, objects::{
-        objects::Object, relationship::*, vertex::*
-    }, base_types::{
+    DB, base_types::{
         RelationshipId, VertexId
+    }, constants::lengths::{RELATIONSHIP_NULL_ID, RELATIONSHIP_PAGE_LENGTH, START_RELATIONSHIPS, START_VERTICES, VERTEX_PAGE_LENGTH}, db::db::lock_db_handle, errors::{
+        RelationshipCreationError, RelationshipCreationFailure, VertexCreationError, VertexCreationFailure
+    }, iterator::node_iterator, objects::{
+        objects::Object, relationship::*, vertex::*
     }
 };
 use crate::{RELATIONSHIP_BYTE_LENGTH, VERTEX_BYTE_LENGTH};
@@ -51,37 +51,15 @@ pub fn read_relationship_locked (db_handle: &DB, rel_id: RelationshipId) -> Resu
 
 
 
-pub fn read_all_nodes (db_handle: &DB) -> Result<Vec<Vertex>, VertexCreationError> {
-    let lock = lock_db_handle(db_handle).unwrap();
-    let mut vertices: Vec<Vertex> = vec![];
-    let mut buffer: [u8; VERTEX_PAGE_LENGTH] = [0; VERTEX_PAGE_LENGTH];
-    let mut cap = VERTEX_PAGE_LENGTH;
-
-    // read page_size into buffer 
-    let mut pos = START_VERTICES as u64;
-    let file_len = lock.f_vert.file.metadata()?.len();
-
-    // make vertices out of buffer 
-    while lock.f_vert.file.read_at(&mut buffer, pos).is_ok() {
-        println!("buffer: {:?}", buffer);
-        if pos + VERTEX_PAGE_LENGTH as u64 > file_len {
-            println!("Trying to read {} bytes, but only {} bytes are left.", VERTEX_PAGE_LENGTH, file_len - pos);
-            cap = (file_len - pos) as usize;
-            vertices.extend(vertices_from_bytes(&buffer, pos, cap)?);
-            break;
-        }
-        println!("Filled full buffer ({VERTEX_PAGE_LENGTH} bytes).");
-        vertices.extend(vertices_from_bytes(&buffer, pos, cap)?);
-        pos += VERTEX_PAGE_LENGTH as u64;
-    }
-    // append vertices to return_vec 
-    // return return_vec
-    Ok(vertices)
+pub fn read_all_nodes (db_handle: &DB) -> Vec<Vertex> {
+    node_iterator::NodeIterator::new(
+        db_handle, 
+        None::<fn(&&Vertex) -> bool> // empty iterator pattern
+    ).collect()
 }
 
 
-
-fn vertices_from_bytes (buffer: &[u8; VERTEX_PAGE_LENGTH], start_pos: u64, cap: usize) -> Result<Vec<Vertex>, VertexCreationError> {
+pub fn vertices_from_bytes (buffer: &[u8; VERTEX_PAGE_LENGTH], start_pos: u64, cap: usize) -> Result<Vec<Vertex>, VertexCreationError> {
     let mut vertices: Vec<Vertex> = vec![];
     for i in (0..cap).step_by(VERTEX_BYTE_LENGTH) {
         let id = ((start_pos + i as u64 - START_VERTICES as u64) / VERTEX_BYTE_LENGTH as u64) as VertexId;
