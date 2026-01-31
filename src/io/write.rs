@@ -18,7 +18,7 @@ use crate::objects::{
 use crate::io::update_ptrs::update_existing_rel_ptrs_2;
 
 
-pub fn write_vertex_locked (db_handle: &DB, v: Vertex) -> Result<VertexId, VertexCreationError> {
+pub fn write_vertex_locked <'a> (db_handle: &'a DB, v: Vertex) -> Result<VertexId, VertexCreationError> {
     let db_lock = lock_db_handle_mut(db_handle)
         .ok_or(VertexCreationError::new("Db lock (rw) failed", VertexCreationFailure::DbLock)
     )?;
@@ -29,7 +29,7 @@ pub fn write_vertex_locked (db_handle: &DB, v: Vertex) -> Result<VertexId, Verte
 }
 
 
-pub fn write_relationship_locked (db_handle: &DB, r: Relationship) -> Result<(), RelationshipCreationError> {
+pub fn write_relationship_locked <'a> (db_handle: &'a DB, r: Relationship) -> Result<(), RelationshipCreationError> {
     if r.rel.vertex_refs.start_vertex == r.rel.vertex_refs.end_vertex {
         return Err(RelationshipCreationError::new(
             "Cannot write relationship where start == end (vertex cannot have a relationship with itself)", 
@@ -56,7 +56,7 @@ pub fn write_relationship_locked (db_handle: &DB, r: Relationship) -> Result<(),
 }
 
 
-pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex: VertexId, rel_type: TypeID, properties: &str) -> Result<RelationshipId, RelationshipCreationError> {
+pub fn add_new_relationship <'a> (db_handle: &'a DB, start_vertex: VertexId, end_vertex: VertexId, rel_type: TypeID, properties: &str) -> Result<RelationshipId, RelationshipCreationError> {
     let v_start = get_node(db_handle, start_vertex).unwrap();
     let (s_prev, s_next) = v_start.get_prev_next(db_handle).unwrap();
 
@@ -100,7 +100,7 @@ pub fn add_new_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex:
 
 
 
-pub fn add_new_node (db_handle: &DB, type_id: TypeID, properties: &str) -> Result<VertexId, VertexCreationError> {
+pub fn add_new_node <'a> (db_handle: &'a DB, type_id: TypeID, properties: &str) -> Result<VertexId, VertexCreationError> {
     //
     // parse properties (&str to bson)
     let new_prop_id = {

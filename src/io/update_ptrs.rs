@@ -6,8 +6,8 @@ use crate::constants::lengths::RELATIONSHIP_NULL_ID;
 
 
 
-pub fn update_existing_rel_ptrs_2 (
-    db_handle: &DB, 
+pub fn update_existing_rel_ptrs_2 <'a> (
+    db_handle: &'a DB, 
     new_rel: &mut Relationship, 
     v_start: Vertex, 
     start_vertex: VertexId, 
@@ -28,8 +28,8 @@ pub fn update_existing_rel_ptrs_2 (
 
 
 
-    pub fn update_ptrs_for_start_vertex (
-        db_handle: &DB, 
+    pub fn update_ptrs_for_start_vertex <'a> (
+        db_handle: &'a DB, 
         new_rel: &mut Relationship, 
         v_start: Vertex, 
         start_vertex: VertexId, 
@@ -91,8 +91,8 @@ pub fn update_existing_rel_ptrs_2 (
 
 
 
-pub fn update_ptrs_for_end_vertex (
-    db_handle: &DB, 
+pub fn update_ptrs_for_end_vertex<'a> (
+    db_handle: &'a DB, 
     new_rel: &mut Relationship, 
     v_end: Vertex, 
     end_vertex: VertexId, 

@@ -6,7 +6,6 @@ use crate::{base_types::ID, constants::lengths::{START_VERTICES, VERTEX_PAGE_LEN
 pub struct NodeIterator <'a> {
     db_handle: &'a DB,
     last_pos: u64, // last pos to fill new vector
-    filter: NodeFilter,
     file_len: Option<u64>,
     buf: [u8; VERTEX_PAGE_LENGTH],
     current_nodes: Vec<Vertex>,
@@ -15,21 +14,12 @@ pub struct NodeIterator <'a> {
 
 
 impl <'a> NodeIterator <'a> {
-    pub fn new <F> (db_handle: &'a DB, predicate: Option<F>) -> Self 
-    where F: FnMut(&&Vertex) -> bool + Copy + 'static
+    pub fn new (db_handle: &'a DB) -> Self 
     {
-        let node_filter = {
-            if predicate.is_none() {
-                NodeFilter::new()
-            } else {
-                NodeFilter::new().set_predicate(predicate.unwrap())
-            }
-        };
         let buf: [u8; VERTEX_PAGE_LENGTH] = [0; VERTEX_PAGE_LENGTH];
         Self {
             db_handle,
             last_pos: START_VERTICES as u64,
-            filter: node_filter,
             file_len: None,
             buf,
             current_nodes: vec![],
@@ -72,7 +62,7 @@ impl Iterator for NodeIterator <'_>
             let cap = (self.file_len.unwrap() - pos) as usize;
             lock.f_vert.file.read_at(&mut self.buf, pos).ok()?;
             self.current_nodes = vertices_from_bytes(&self.buf, 0, cap).ok()?;
-            // filter current_nodes by self.predicate
+            // TODO: filter current_nodes by self.predicate
             println!("Read those vertices: {:?}", self.buf);
             self.last_pos = self.file_len.unwrap();
         } else {

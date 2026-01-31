@@ -1,4 +1,4 @@
-use crate::{db::init_files::init_type_file, objects::{property::PropertyFile, relationship::RelationshipFile, vertex::VertexFile}};
+use crate::{db::init_files::init_type_file, index::indexing::IndexFile, objects::{property::PropertyFile, relationship::RelationshipFile, vertex::VertexFile}};
 use crate::types::type_management::TypeFile;
 use crate::constants::{paths::*, limits::*};
 use crate::base_types::*;
@@ -62,7 +62,7 @@ impl GraphDB {
         // others (caching, transactions, tmp, ...)
         // todo!("touch other files");
 
-        let db = DBInnerHandle::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path, &t_path)
+        let db = DBInnerHandle::new(RwLock::new(DBInner::new(db_name.to_string(), &r_path, &v_path, &p_path, &t_path, &config)
             .expect("Fatal: failed DB_Inner-initialization")));
         println!("Finished DB initialization from scratch");
         Ok(GraphDB {
@@ -112,8 +112,10 @@ impl GraphDB {
         }
 
 
-        let db = DBInnerHandle::new(RwLock::new(DBInner::new(&r_path, &v_path, &p_path, &t_path)
-            .expect("Fatal: failed DB_Inner-initialization")));
+        let db = DBInnerHandle::new(RwLock::new(
+            DBInner::new(
+                db_name.to_string(), &r_path, &v_path, &p_path, &t_path, &config
+            ).expect("Fatal: failed DB_Inner-initialization")));
         println!("Finished DB initialization from files");
         Ok(GraphDB {
             db,
@@ -221,25 +223,38 @@ pub fn lock_db_handle (db_handle: &DB) -> Option<RwLockReadGuard<'_, DBInner>>{
 
 #[derive(Debug)]
 pub struct DBInner {
-    pub f_rel: RelationshipFile,
-    pub f_vert: VertexFile,
-    pub f_prop: PropertyFile,
-    pub f_tp: TypeFile,
+    pub db_name: String,
+    pub f_rel:      RelationshipFile,
+    pub f_vert:     VertexFile,
+    pub f_prop:     PropertyFile,
+    pub f_tp:       TypeFile,
+    pub indices:    Vec<IndexFile>,
 }
 
 
 impl DBInner {
-    pub fn new (f_rel_path: &Path, f_vert_path: &Path, f_prop_path: &Path, f_tp_path: &Path) -> Result<Self, std::io::Error> {
-        let f_rel = RelationshipFile::new(f_rel_path)?;
-        let f_vert = VertexFile::new(f_vert_path)?;
-        let f_prop = PropertyFile::new(f_prop_path)?;
-        let f_tp = TypeFile::new(f_tp_path)?;
-        Ok (DBInner { f_rel, f_vert, f_prop, f_tp })
+    pub fn new (
+        db_name: String, f_rel_path: &Path, f_vert_path: &Path, f_prop_path: &Path, f_tp_path: &Path, config_handle: &ConfigHandle
+    ) -> Result<Self, std::io::Error> {
+        // TODO: indices from config 
+        let indices = vec![]; 
+        Ok (DBInner {
+            db_name,
+            f_rel:  RelationshipFile::new(f_rel_path)?,
+            f_vert: VertexFile::new(f_vert_path)?,
+            f_prop: PropertyFile::new(f_prop_path)?,
+            f_tp:   TypeFile::new(f_tp_path)?,
+            indices
+        })
     }
 
 }
 
 
+#[derive(Debug)]
 pub struct DB {
     pub db: DBInnerHandle,
 }
+
+
+

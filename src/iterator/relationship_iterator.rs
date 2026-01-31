@@ -116,20 +116,3 @@ pub enum IterDirection {
 
 
 
-pub struct NodeIterator <'a> {
-    pub db_handle: &'a mut DB,
-    pub start_node_id: Option<VertexId>, 
-    pub next_node: VertexId,
-    pub direction: IterDirection, 
-}
-
-impl Iterator for NodeIterator <'_> {
-    type Item = Vertex;
-
-    fn next (&mut self) -> Option<Vertex> {
-        None
-    }
-}
-
-
-

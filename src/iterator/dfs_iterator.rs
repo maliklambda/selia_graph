@@ -3,7 +3,7 @@ use crate::DB;
 
 
 
-pub fn dfs_iter (db_handle: &DB, start_id: VertexId) -> impl Iterator<Item=VertexId> {
+pub fn dfs_iter <'a> (db_handle: &'a DB, start_id: VertexId) -> impl Iterator<Item=VertexId> {
     let mut visited: Vec<VertexId> = vec![];
     let mut stack: Vec<VertexId> = vec![start_id];
     std::iter::from_fn(move || {

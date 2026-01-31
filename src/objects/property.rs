@@ -93,7 +93,7 @@ impl PropertyFile {
         assert_ne!(prop_id, PROPERTY_NULL_ID);
         // read size of Bobj
         const BUF_LEN: usize = (BobjLen::BITS/(BYTE_LENGTH as u32)) as usize;
-        println!("Reading {BUF_LEN} many bytes for len @ {prop_id}");
+        println!("Reading {BUF_LEN} bytes for len @ {prop_id}");
         let mut buf = [0_u8; BUF_LEN];
         self.file.read_exact_at(&mut buf, prop_id as u64)?;
         let size = BobjLen::from_ne_bytes(buf);

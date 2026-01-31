@@ -17,53 +17,53 @@ use crate::{
 };
 
 
-pub fn add_node (db_handle: &DB, node_type: TypeID, properties: &str) -> Result<VertexId, VertexCreationError> {
+pub fn add_node <'a> (db_handle: &'a DB, node_type: TypeID, properties: &str) -> Result<VertexId, VertexCreationError> {
     add_new_node(db_handle, node_type, properties)
 }
 
 
 
-pub fn add_relationship (db_handle: &DB, start_vertex: VertexId, end_vertex: VertexId, rel_type: TypeID, properties: &str) -> Result<RelationshipId, RelationshipCreationError> {
+pub fn add_relationship <'a> (db_handle: &'a DB, start_vertex: VertexId, end_vertex: VertexId, rel_type: TypeID, properties: &str) -> Result<RelationshipId, RelationshipCreationError> {
     add_new_relationship(db_handle, start_vertex, end_vertex, rel_type, properties)
 }
 
 
-pub fn get_node (db_handle: &DB, node_id: VertexId) -> Result<Vertex, VertexCreationError> {
+pub fn get_node <'a> (db_handle: &'a DB, node_id: VertexId) -> Result<Vertex, VertexCreationError> {
     read_vertex_locked(db_handle, node_id)
 }
 
 
-pub fn get_all_nodes (db_handle: &DB) -> Vec<Vertex> {
+pub fn get_all_nodes <'a> (db_handle: &'a DB) -> Vec<Vertex> {
     read_all_nodes(db_handle)
 }
 
 
-pub fn get_all_relationships (db_handle: &DB) -> Vec<Relationship> {
+pub fn get_all_relationships <'a> (db_handle: &'a DB) -> Vec<Relationship> {
     read_all_relationships(db_handle).unwrap()
 }
 
 
-pub fn update_node (db_handle: &DB, node_id: VertexId, mut new_node: Vertex) -> Result<(), VertexCreationError> {
+pub fn update_node <'a> (db_handle: &'a DB, node_id: VertexId, mut new_node: Vertex) -> Result<(), VertexCreationError> {
     new_node.id = node_id;
     write_vertex_locked(db_handle, new_node)?;
     Ok(())
 }
 
 
-pub fn update_relationship (db_handle: &DB, rel_id: RelationshipId, mut new_rel: Relationship) -> Result<(), RelationshipCreationError> {
+pub fn update_relationship <'a> (db_handle: &'a DB, rel_id: RelationshipId, mut new_rel: Relationship) -> Result<(), RelationshipCreationError> {
     println!("Updating relationship @{} to be {:?}", RelationshipFile::get_offset_rel(rel_id), new_rel);
     new_rel.id = rel_id;
     write_relationship_locked(db_handle, new_rel)
 }
 
 
-pub fn get_relationship(db_handle: &DB, rel_id: RelationshipId) -> Option<Relationship> {
+pub fn get_relationship <'a> (db_handle: &'a DB, rel_id: RelationshipId) -> Option<Relationship> {
     read_relationship_locked(db_handle, rel_id).ok()
 
 }
 
 
-pub fn get_ingoing_relationships (db_handle: &DB, node_id: VertexId) -> Vec<Relationship> {
+pub fn get_ingoing_relationships <'a> (db_handle: &'a DB, node_id: VertexId) -> Vec<Relationship> {
     let node = get_node(db_handle, node_id).unwrap();
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
     let rel_iterator = RelationshipIterator::new(db_handle, node_id);
@@ -73,7 +73,7 @@ pub fn get_ingoing_relationships (db_handle: &DB, node_id: VertexId) -> Vec<Rela
 
 
 
-pub fn get_outgoing_relationships (db_handle: &DB, node_id: VertexId) -> Vec<Relationship> {
+pub fn get_outgoing_relationships <'a> (db_handle: &'a DB, node_id: VertexId) -> Vec<Relationship> {
     let node = get_node(db_handle, node_id).unwrap();
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
     let rel_iterator = RelationshipIterator::new(db_handle, node_id);
@@ -82,11 +82,11 @@ pub fn get_outgoing_relationships (db_handle: &DB, node_id: VertexId) -> Vec<Rel
 }
 
 
-pub fn get_neighboring_ids (db_handle: &DB, node_id: VertexId) -> Vec<VertexId> {
+pub fn get_neighboring_ids <'a> (db_handle: &'a DB, node_id: VertexId) -> Vec<VertexId> {
     let node = get_node(db_handle, node_id).unwrap();
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
     let rel_iterator = RelationshipIterator::new(db_handle, node_id);
-    println!("\n\n\n length: {:?}", rel_iterator.collect::<Vec<Relationship>>());
+    println!("\n\n\n length: {:?}", rel_iterator.collect::<Vec<_>>());
     let first_rel = get_relationship(db_handle, node.vertex.first_rel).unwrap();
     let rel_iterator = RelationshipIterator::new(db_handle, node_id);
     rel_iterator.into_iter().map(|r| {println!("\n\ncur item{:?}\n\n", r); r})
@@ -105,13 +105,13 @@ pub fn get_neighboring_ids (db_handle: &DB, node_id: VertexId) -> Vec<VertexId> 
 
 
 
-pub fn get_neighbors (db_handle: &DB, node_id: VertexId) -> Vec<Vertex> {
+pub fn get_neighbors <'a> (db_handle: &'a DB, node_id: VertexId) -> Vec<Vertex> {
     let ids = get_neighboring_ids(db_handle, node_id);
     ids.iter().map(|id| get_node(db_handle, *id).unwrap()).collect()
 }
 
 
-pub fn dfs (db_handle: &DB, start_id: VertexId) -> Vec<VertexId> {
+pub fn dfs <'a> (db_handle: &'a DB, start_id: VertexId) -> Vec<VertexId> {
     println!("\n\n\nStarting DFS");
     let mut visited: Vec<VertexId> = vec![];
     let mut stack: Vec<VertexId> = vec![];
@@ -120,7 +120,7 @@ pub fn dfs (db_handle: &DB, start_id: VertexId) -> Vec<VertexId> {
 }
  
 
-fn inner_dfs (db_handle: &DB, node: VertexId, visited: &mut Vec<VertexId>, stack: &mut Vec<VertexId>) {
+fn inner_dfs <'a> (db_handle: &'a DB, node: VertexId, visited: &mut Vec<VertexId>, stack: &mut Vec<VertexId>) {
     if visited.contains(&node) { return; }
     visited.push(node);
     stack.push(node);

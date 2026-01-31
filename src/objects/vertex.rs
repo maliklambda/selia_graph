@@ -41,7 +41,7 @@ impl Vertex {
     }
 
 
-    pub fn get_prev_next(&self, db_handle: &DB) -> Option<(RelationshipId, RelationshipId)> {
+    pub fn get_prev_next <'a> (&self, db_handle: &'a DB) -> Option<(RelationshipId, RelationshipId)> {
         match read_relationship_locked(db_handle, self.vertex.first_rel) {
             Ok(first_rel) => {
                 if self.id == first_rel.rel.vertex_refs.start_vertex {
@@ -172,7 +172,7 @@ impl VertexFile {
     }
 
 
-    pub fn get_first_available_id_incr (db_handle: &DB) -> Option<VertexId> {
+    pub fn get_first_available_id_incr <'a> (db_handle: &'a DB) -> Option<VertexId> {
         let lock = lock_db_handle_mut(db_handle)?;
         Some(lock.f_vert.first_available_id.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
     }

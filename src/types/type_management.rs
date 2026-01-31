@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::fs::OpenOptions;
 use std::io::Read;
 use std::io::Seek;
@@ -70,6 +71,21 @@ impl TypeFile {
             .ok_or(format!("Did not find type {type_name}"))?;
         let tr_full = self.get_type_full(id)?;
         Ok(tr_full)
+    }
+
+
+    pub fn get_type_by_str_with_id(&mut self, type_name: &str) -> Result<(TypeRef, TypeID), String> {
+        let (_, id) = self.find_type_name(type_name)
+            .ok_or(format!("Did not find type {type_name}"))?;
+        let tr_full = self.get_type_full(id)?;
+        Ok((tr_full, id))
+    }
+
+
+    pub fn get_type_id_by_str(&mut self, type_name: &str) -> Result<TypeID, String> {
+        let (_, id) = self.find_type_name(type_name)
+            .ok_or(format!("Did not find type {type_name}"))?;
+        Ok(id)
     }
 
     pub fn get_type_full (&mut self, type_id: TypeID) -> Result<TypeRef, String> {
@@ -308,7 +324,7 @@ impl Constraints {
 
 #[derive(Clone, Debug)]
 pub struct IndexedFields {
-    pub req_field_idx: u16,
+    pub req_field_idx: u16, // the index in constraints.required_fields vector
     pub field_type: IndexType,
 }
 
@@ -326,10 +342,10 @@ impl IndexedFields {
 
 
 #[repr(u8)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum IndexType {
     STRING = 0,
-    U32 = 1,
+    U64 = 1,
     INVALIDTYPE = u8::MAX,
 }
 
@@ -337,10 +353,19 @@ impl IndexType {
     pub fn from_u8 (num: u8) -> Self {
         match num {
             0 => IndexType::STRING,
-            1 => IndexType::U32,
+            1 => IndexType::U64,
             _ => IndexType::INVALIDTYPE,
         }
     }
+
+    pub fn check_value (&self, json_val: serde_json::Value) -> bool {
+        match self {
+            Self::STRING => json_val.is_string(),
+            Self::U64 => json_val.is_u64(),
+            _ => false
+        }
+    }
+
 }
 
 impl std::fmt::Display for IndexType {
@@ -350,35 +375,41 @@ impl std::fmt::Display for IndexType {
 }
 
 
-pub trait IndexAbleType: std::fmt::Display + Copy {
-    type IdxType;
-    fn to_index_type(&self) -> IndexType;
-    fn to_bytes(&self) -> Vec<u8>;
-    // fn from_bytes(v: Vec<u8>) -> Self;
+#[derive(Clone, Copy)]
+pub enum IndexAbleType<'a> {
+    STRING (&'a str),
+    U64 (u64),
 }
 
 
-impl IndexAbleType for &str {
-    type IdxType = Self;
-    fn to_index_type(&self) -> IndexType {
-        IndexType::STRING
-    }
-    fn to_bytes (&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
+impl <'a> IndexAbleType <'a> {
+    pub fn type_to_str (&self) -> &'a str {
+        match *self {
+            IndexAbleType::STRING(_) => "STRING",
+            IndexAbleType::U64(_) => "U64",
+        }
     }
 }
 
-
-impl IndexAbleType for u32 {
-    type IdxType = Self;
-    fn to_index_type(&self) -> IndexType {
-        IndexType::U32
-    }
-    fn to_bytes (&self) -> Vec<u8> {
-        self.to_ne_bytes().to_vec()
+impl <'a> std::fmt::Display for IndexAbleType<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IndexAbleType::STRING(s) => write!(f, "{}", s),
+            IndexAbleType::U64(n) => write!(f, "{}", n),
+        }
     }
 }
 
 
+impl <'a> From <&'a str> for IndexAbleType<'a> {
+    fn from(value: &'a str) -> Self {
+        IndexAbleType::STRING(value)
+    }
+}
 
 
+impl <'a> From <u64> for IndexAbleType<'a> {
+    fn from(value: u64) -> Self {
+        IndexAbleType::U64(value)
+    }
+}

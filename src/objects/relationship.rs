@@ -27,7 +27,7 @@ pub struct Relationship {
 
 impl Relationship {
     // fn new takes ownership of multiple vertices to ensure that their vertex_id is valid
-    pub fn new (db_handle: &DB, id: RelationshipId, start_vertex: Vertex, end_vertex: Vertex, rel_type: u32, first_prop: PropertyId) -> Option<Self> {
+    pub fn new <'a> (db_handle: &'a DB, id: RelationshipId, start_vertex: Vertex, end_vertex: Vertex, rel_type: u32, first_prop: PropertyId) -> Option<Self> {
         let vertex_refs = RelationshipVertexRefs::from_vertex_pair(db_handle, start_vertex, end_vertex);
         if end_vertex.id == start_vertex.id {
             return None;
@@ -152,7 +152,7 @@ impl RelationshipVertexRefs {
         RelationshipVertexRefs { start_vertex: sv, end_vertex: ev, start_prev: sp, start_next: sn, end_prev: ep, end_next: en }
     }
 
-    pub fn from_vertex_pair (db_handle: &DB, start_vertex: Vertex, end_vertex: Vertex) -> Self {
+    pub fn from_vertex_pair <'a> (db_handle: &'a DB, start_vertex: Vertex, end_vertex: Vertex) -> Self {
         let (start_prev, start_next) = start_vertex.get_prev_next(db_handle).unwrap();
         let (end_prev, end_next) = end_vertex.get_prev_next(db_handle).unwrap();
         todo!("Update existing prev and existing next for both start and end");
@@ -206,7 +206,7 @@ impl RelationshipFile {
         ((rel_id*RELATIONSHIP_BYTE_LENGTH as u32) + START_RELATIONSHIPS as u32) as u64
     }
 
-    pub fn get_first_available_id (db_handle: &DB) -> Option<RelationshipId> {
+    pub fn get_first_available_id <'a> (db_handle: &'a DB) -> Option<RelationshipId> {
         let mut lock = lock_db_handle_mut(db_handle)?;
         let new_id = lock.f_rel.first_available_id;
         lock.f_rel.first_available_id += 1;

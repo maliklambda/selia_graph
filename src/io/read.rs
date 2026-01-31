@@ -12,7 +12,7 @@ use crate::{RELATIONSHIP_BYTE_LENGTH, VERTEX_BYTE_LENGTH};
 
 
 
-pub fn read_vertex_locked (db_handle: &DB, vertex_id: VertexId) -> Result<Vertex, VertexCreationError> {
+pub fn read_vertex_locked <'a> (db_handle: &'a DB, vertex_id: VertexId) -> Result<Vertex, VertexCreationError> {
     let db_lock = lock_db_handle(db_handle)
         .ok_or(VertexCreationError::new("Db lock (r) failed", VertexCreationFailure::DbLock)
     )?;
@@ -29,7 +29,7 @@ pub fn read_vertex_locked (db_handle: &DB, vertex_id: VertexId) -> Result<Vertex
 
 
 
-pub fn read_relationship_locked (db_handle: &DB, rel_id: RelationshipId) -> Result<Relationship, RelationshipCreationError> {
+pub fn read_relationship_locked <'a> (db_handle: &'a DB, rel_id: RelationshipId) -> Result<Relationship, RelationshipCreationError> {
     if rel_id == RELATIONSHIP_NULL_ID {
         return Err(RelationshipCreationError::new(
             "Trying to read RELATIONSHIP_NULL_ID", 
@@ -51,10 +51,9 @@ pub fn read_relationship_locked (db_handle: &DB, rel_id: RelationshipId) -> Resu
 
 
 
-pub fn read_all_nodes (db_handle: &DB) -> Vec<Vertex> {
+pub fn read_all_nodes <'a> (db_handle: &'a DB) -> Vec<Vertex> {
     node_iterator::NodeIterator::new(
         db_handle, 
-        None::<fn(&&Vertex) -> bool> // empty iterator pattern
     ).collect()
 }
 
@@ -72,7 +71,7 @@ pub fn vertices_from_bytes (buffer: &[u8; VERTEX_PAGE_LENGTH], start_pos: u64, c
 
 
 
-pub fn read_all_relationships (db_handle: &DB) -> Result<Vec<Relationship>, RelationshipCreationError> {
+pub fn read_all_relationships <'a> (db_handle: &'a DB) -> Result<Vec<Relationship>, RelationshipCreationError> {
     let mut rels: Vec<Relationship> = vec![];
     let mut id: RelationshipId = 0;
     loop {
