@@ -1,0 +1,3 @@
+[submodule "Sypher"]
+	path = Sypher
+	url = https://github.com/maliklambda/Sypher.git
