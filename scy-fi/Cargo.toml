@@ -1,0 +1,8 @@
+[package]
+name = "scy-fi"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sypher = { path = "../Sypher" }
+selia = { path = ".." }
