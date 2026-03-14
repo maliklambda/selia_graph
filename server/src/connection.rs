@@ -1,0 +1,53 @@
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+};
+
+use crate::utils::errors::ConnError;
+
+#[derive(Debug)]
+pub enum ConnStatus {
+    Connecting,
+    Authenticating,
+    Idle,
+    Busy,
+    Closed,
+}
+
+#[derive(Debug)]
+pub struct Connection {
+    pub conn_id: u64,
+    pub status: ConnStatus,
+
+    pub stream: TcpStream,
+    pub buf_read: Vec<u8>,
+    pub buf_write: Vec<u8>,
+}
+
+impl Connection {
+    pub fn new(conn_id: u64, stream: TcpStream) -> Connection {
+        Connection {
+            conn_id,
+            status: ConnStatus::Connecting,
+            stream,
+            buf_read: vec![],
+            buf_write: vec![],
+        }
+    }
+
+    pub fn send(&mut self, msg: &[u8]) -> Result<(), ConnError> {
+        self.stream
+            .write_all(msg)
+            .map_err(|_| ConnError::ClientWriteErr)
+    }
+
+    pub fn receive(&mut self) -> Result<Vec<u8>, ConnError> {
+        let mut buf = [0u8; 512];
+        let n = self
+            .stream
+            .read(&mut buf)
+            .map_err(|_| ConnError::ClientReadErr)?;
+        self.stream.flush().map_err(|_| ConnError::ClientReadErr)?;
+        Ok(buf[..n].to_vec())
+    }
+}

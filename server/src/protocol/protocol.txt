@@ -1,0 +1,128 @@
+Selia-network protocol
+
+// initialize connection
+1. Client -> Server: Syn
+2. Server -> Client: SynAck
+
+// startup
+3. Client -> Server: Startup
+4. Server -> Client: StartupAck (+ salt on success)
+
+// authenticate connection
+5. Client -> Server: Auth Request (w. hashed salt)
+6. Server -> Client: Auth Response
+
+// exchange Data
+7. Client -> Server: Query Request
+8. Server -> Client: Query Response
+      - Error vs. Data package
+      - Data packages with batched rows
+
+
+
+
+v0.1
+
+// startup
+
+// startup headers must be version agnostic
+startup:
+  - headers (5bytes):
+    16bit     8bit      16bit
+    version   encoding  payload length
+
+  - payload (max_len = 518 bytes): 
+    8bit              8bit                        1-256 bytes   1-256 bytes
+    username length   requested_db_name length    username      requested_db_name
+
+
+startup-ack:
+  - headers ():
+    16bit         16bit       8bit      16bit
+    version_ack   db_version  is_error  payload length
+
+  - payload success:
+    16 bit
+    salt
+
+  - payload failure:
+    16bit         16bit           1-65.536 bytes
+    error_reason  err_msg length  err_msg
+    
+
+
+
+// authenticate connection
+
+Auth Request:
+  // only uses password since username has been sent already
+  - headers:
+    40bytes
+    password (SHA1 hashed using salt)
+  // no payload needed
+
+
+Auth Response:
+  - headers:
+    8bit            16bit
+    auth_succeeded  payload_length
+
+  // no payload needed for success
+
+  - payload failure:
+    16bit         8bit            1-256bytes
+    error_reason  err_msg length  err_msg
+
+
+
+// data exchange with schema first-sequential streaming
+
+Query Request:
+  - headers:
+    16bit
+    payload_length
+
+  - payload:
+    1-65.536 bytes
+    query_str
+
+
+Query Response:
+  - headers:
+    8bit      64bit
+    is_error  payload_length
+
+  - payload success:
+    1-2^64 bytes
+    Query Response Schema
+    
+  - payload failure:
+    16bit       16bit           1-65.536 bytes
+    err_reason  err_msg length  err_msg
+
+
+
+Query Response Schema:
+  - headers:
+    16bit           32bit
+    num_of_columns  payload_length
+
+  - payload:
+    8bit              1-256 bytes   16bit
+    type_name length  type_name     type_length   // repeat this schema for each column
+
+Query Response Data:
+  - headers:
+    16bit           32bit
+    num_of_columns  payload_length    // num_of_columns sent as check
+
+  - payload:
+    8bit          1-65.536 bytes
+    type_length   raw_query_row
+
+
+
+
+
+
+
