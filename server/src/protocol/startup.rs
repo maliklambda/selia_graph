@@ -17,6 +17,10 @@ impl StartUp {
         let headers = StartUpHeaders::new(version, payload.byte_length().try_into().unwrap());
         StartUp { headers, payload }
     }
+
+    pub fn extract_payload(&self) -> &StartUpPayload {
+        &self.payload
+    }
 }
 
 #[test]
@@ -129,8 +133,8 @@ impl Serializable for StartUpHeaders {
 ///     username length   requested_db_name length    username      requested_db_name
 #[derive(PartialEq, Debug)]
 pub struct StartUpPayload {
-    username: String,
-    requested_db_name: String,
+    pub username: String,
+    pub requested_db_name: String,
 }
 
 impl StartUpPayload {

@@ -1,3 +1,76 @@
+use crate::protocol::startup_ack::StartUpAckErr;
+
+
+
+pub mod client_errors {
+    use crate::utils::errors::{AuthError, ConnError, ProtocolError};
+
+    #[derive(Debug)]
+    pub enum ClientError {
+        ConnectionError (ConnError),
+        ProtocolError (ProtocolError),
+        AuthenticationError (AuthError),
+    }
+
+    impl std::error::Error for ClientError {}
+    impl std::fmt::Display for ClientError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::ProtocolError(prot_err) => write!(f, "Client Error (Protocol): {prot_err}"),
+                Self::ConnectionError(conn_err) => write!(f, "Client Error (Connection): {conn_err}"),
+                Self::AuthenticationError(auth_err) => write!(f, "Client Error (Autentication): {auth_err}"),
+            }
+        }
+    }
+
+    impl From<ConnError> for ClientError {
+        fn from(value: ConnError) -> Self {
+            ClientError::ConnectionError(value)
+        }
+    }
+}
+
+
+pub mod server_errors {
+    use crate::utils::errors::ServerShutdownError;
+
+    #[derive(Debug)]
+    pub enum ServerError {
+        UnexpectedShutDown(ServerShutdownError),
+    }
+
+    impl std::error::Error for ServerError {}
+    impl std::fmt::Display for ServerError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::UnexpectedShutDown(shutdown_err) => write!(f, "Server Error (Unexpected shut down): {shutdown_err}"),
+            }
+        }
+    }
+
+}
+
+
+#[derive(Debug)]
+pub enum AuthError {
+    UnknownUser {name: String},
+    InvalidPassword,
+    InsufficientPermissions,
+}
+
+impl std::error::Error for AuthError {}
+
+impl std::fmt::Display for AuthError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownUser { name } => write!(f, "User '{name}' is not known"),
+            Self::InvalidPassword => write!(f, "Incorrect password"),
+            Self::InsufficientPermissions => write!(f, "User does not have sufficient permissions"),
+        }
+    }
+}
+
+
 #[derive(Debug)]
 pub enum ConnError {
     NoTcpConnection,
@@ -37,5 +110,42 @@ impl std::fmt::Display for U8EnumConversionError {
             "Converting {} to an enum has failed.",
             self.invalid_value
         )
+    }
+}
+
+#[derive(Debug)]
+pub struct ServerShutdownError {}
+
+impl std::error::Error for ServerShutdownError {}
+
+impl std::fmt::Display for ServerShutdownError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Debug)]
+pub struct ServerAcceptConnError {}
+
+impl std::error::Error for ServerAcceptConnError {}
+
+impl std::fmt::Display for ServerAcceptConnError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Debug)]
+pub enum ProtocolError {
+    StartUpAckIsErr(StartUpAckErr),
+}
+
+impl std::error::Error for ProtocolError {}
+
+impl std::fmt::Display for ProtocolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProtocolError::StartUpAckIsErr(err) => write!(f, "Startup ack was error: {:?}", err),
+        }
     }
 }

@@ -1,5 +1,5 @@
 pub mod server {
-    pub const PORT: u16 = 2808;
+    pub const PORT: u32 = 2808;
     pub const HOST: &str = "127.0.0.1";
 
     pub fn get_host_name_full() -> String {
@@ -10,3 +10,4 @@ pub mod server {
 }
 
 pub const TCP_CONNECT_RETIRES: u8 = 5;
+pub const HASH_LENGTH: usize = 40;

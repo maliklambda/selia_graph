@@ -18,6 +18,7 @@ pub enum ConnStatus {
 pub struct Connection {
     pub conn_id: u64,
     pub status: ConnStatus,
+    pub version: u16,
 
     pub stream: TcpStream,
     pub buf_read: Vec<u8>,
@@ -25,10 +26,11 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(conn_id: u64, stream: TcpStream) -> Connection {
+    pub fn new(conn_id: u64, stream: TcpStream, version: u16) -> Connection {
         Connection {
             conn_id,
             status: ConnStatus::Connecting,
+            version,
             stream,
             buf_read: vec![],
             buf_write: vec![],

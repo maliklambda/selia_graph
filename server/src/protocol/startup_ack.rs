@@ -1,54 +1,76 @@
 use crate::{
     serialization::{Serializable, string_from_bytes, string_to_bytes},
-    utils::errors::U8EnumConversionError,
+    utils::{errors::U8EnumConversionError, types::Salt},
 };
 
 #[derive(Debug, PartialEq)]
-pub struct StartupAck {
-    headers: StartupAckHeaders,
-    payload: Result<StartupAckPayload, StartupAckErr>,
+pub struct StartUpAck {
+    pub headers: StartUpAckHeaders,
+    pub payload: Result<StartUpAckPayload, StartUpAckErr>,
 }
 
 #[test]
 fn startup_ack_serialization_success() {
-    let payload = StartupAckPayload { salt: u16::MAX };
-    let headers = StartupAckHeaders {
+    let payload = StartUpAckPayload { salt: u16::MAX };
+    let headers = StartUpAckHeaders {
         db_version: 1,
         version_ack: 2,
         is_error: false,
         payload_length: payload.byte_length().try_into().unwrap(),
     };
-    let su_ack = StartupAck {
+    let su_ack = StartUpAck {
         headers,
         payload: Ok(payload),
     };
     let bytes = su_ack.to_bytes();
-    let new_su_ack = StartupAck::from_bytes(&bytes);
+    let new_su_ack = StartUpAck::from_bytes(&bytes);
     assert_eq!(su_ack, new_su_ack);
 }
 
 #[test]
 fn startup_ack_serialization_err() {
-    let payload = StartupAckErr {
-        reason: StartupAckErrReason::Default,
+    let payload = StartUpAckErr {
+        reason: StartUpAckErrReason::Default,
         err_msg: "Some error message".to_string(),
     };
-    let headers = StartupAckHeaders {
+    let headers = StartUpAckHeaders {
         db_version: 1,
         version_ack: 2,
         is_error: true,
         payload_length: payload.byte_length().try_into().unwrap(),
     };
-    let su_ack = StartupAck {
+    let su_ack = StartUpAck {
         headers,
         payload: Err(payload),
     };
     let bytes = su_ack.to_bytes();
-    let new_su_ack = StartupAck::from_bytes(&bytes);
+    let new_su_ack = StartUpAck::from_bytes(&bytes);
     assert_eq!(su_ack, new_su_ack);
 }
 
-impl Serializable for StartupAck {
+impl StartUpAck {
+    pub fn new_success(headers: StartUpAckHeaders, payload: StartUpAckPayload) -> Self {
+        assert!(!headers.is_error);
+        Self {
+            headers,
+            payload: Ok(payload),
+        }
+    }
+
+    pub fn new_error(headers: StartUpAckHeaders, payload_err: StartUpAckErr) -> Self {
+        assert!(headers.is_error);
+        Self {
+            headers,
+            payload: Err(payload_err),
+        }
+    }
+
+    pub fn is_error(&self) -> bool {
+        self.headers.is_error
+    }
+}
+
+impl Serializable for StartUpAck {
     fn to_bytes(&self) -> Vec<u8> {
         let b_headers = self.headers.to_bytes();
         let b_payload: Vec<u8> = match &self.payload {
@@ -65,24 +87,24 @@ impl Serializable for StartupAck {
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
-        let headers = StartupAckHeaders::from_bytes(bytes);
+        let headers = StartUpAckHeaders::from_bytes(bytes);
         let payload = {
             if headers.is_error {
                 println!("Got headers error");
-                Err(StartupAckErr::from_bytes(&bytes[headers.byte_length()..]))
+                Err(StartUpAckErr::from_bytes(&bytes[headers.byte_length()..]))
             } else {
                 println!("Got headers non-error");
-                Ok(StartupAckPayload::from_bytes(
+                Ok(StartUpAckPayload::from_bytes(
                     &bytes[headers.byte_length()..],
                 ))
             }
         };
-        StartupAck { headers, payload }
+        StartUpAck { headers, payload }
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub struct StartupAckHeaders {
+pub struct StartUpAckHeaders {
     pub version_ack: u16,
     pub db_version: u16,
     pub is_error: bool,
@@ -91,23 +113,42 @@ pub struct StartupAckHeaders {
 
 #[test]
 fn startup_ack_headers_serialization() {
-    let headers = StartupAckHeaders {
+    let headers = StartUpAckHeaders {
         version_ack: u16::MAX,
         db_version: u16::MAX,
         is_error: false,
         payload_length: u16::MAX,
     };
     let bytes = headers.to_bytes();
-    let new_headers = StartupAckHeaders::from_bytes(&bytes);
+    let new_headers = StartUpAckHeaders::from_bytes(&bytes);
     assert_eq!(headers, new_headers);
 }
 
-impl Serializable for StartupAckHeaders {
+impl StartUpAckHeaders {
+    pub fn new_success(version_ack: u16, db_version: u16, payload_length: u16) -> Self {
+        StartUpAckHeaders {
+            version_ack,
+            db_version,
+            is_error: false,
+            payload_length,
+        }
+    }
+
+    pub fn new_error(version_ack: u16, db_version: u16, payload_length: u16) -> Self {
+        StartUpAckHeaders {
+            version_ack,
+            db_version,
+            is_error: true,
+            payload_length,
+        }
+    }
+}
+
+impl Serializable for StartUpAckHeaders {
     fn to_bytes(&self) -> Vec<u8> {
         let mut ret: Vec<u8> = vec![];
         ret.extend(self.version_ack.to_le_bytes());
         ret.extend(self.db_version.to_le_bytes());
-        println!("writing is_err @{}", ret.len());
         ret.push(self.is_error as u8);
         ret.extend(self.payload_length.to_le_bytes());
         ret
@@ -152,7 +193,7 @@ impl Serializable for StartupAckHeaders {
             idx += std::mem::size_of::<u16>();
             len
         };
-        StartupAckHeaders {
+        StartUpAckHeaders {
             version_ack,
             db_version,
             is_error,
@@ -163,49 +204,55 @@ impl Serializable for StartupAckHeaders {
 
 /// Payload for successfull startup ack
 #[derive(Debug, PartialEq)]
-pub struct StartupAckPayload {
-    salt: u16,
+pub struct StartUpAckPayload {
+    pub salt: Salt,
 }
 
 #[test]
 fn startup_ack_payload_serialization_success() {
-    let payload = StartupAckPayload { salt: u16::MAX };
+    let payload = StartUpAckPayload { salt: u16::MAX };
     let bytes = payload.to_bytes();
-    let new_payload = StartupAckPayload::from_bytes(&bytes);
+    let new_payload = StartUpAckPayload::from_bytes(&bytes);
     assert_eq!(payload, new_payload);
 }
 
-impl Serializable for StartupAckPayload {
+impl Serializable for StartUpAckPayload {
     fn to_bytes(&self) -> Vec<u8> {
         self.salt.to_le_bytes().to_vec()
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
         assert!(bytes.len() == std::mem::size_of::<u16>());
-        let salt = u16::from_le_bytes(bytes.try_into().unwrap());
-        StartupAckPayload { salt }
+        let salt = Salt::from_le_bytes(bytes.try_into().unwrap());
+        StartUpAckPayload { salt }
+    }
+}
+
+impl StartUpAckPayload {
+    pub fn new(salt: Salt) -> Self {
+        StartUpAckPayload { salt }
     }
 }
 
 /// Payload for erroneous startup ack
 #[derive(Debug, PartialEq)]
-pub struct StartupAckErr {
-    reason: StartupAckErrReason,
+pub struct StartUpAckErr {
+    reason: StartUpAckErrReason,
     err_msg: String,
 }
 
 #[test]
 fn startup_ack_err_serialization() {
-    let su_ack_err = StartupAckErr {
-        reason: StartupAckErrReason::Default,
+    let su_ack_err = StartUpAckErr {
+        reason: StartUpAckErrReason::Default,
         err_msg: "Some Error message.".to_string(),
     };
     let bytes = su_ack_err.to_bytes();
-    let new_su_ack_err = StartupAckErr::from_bytes(&bytes);
+    let new_su_ack_err = StartUpAckErr::from_bytes(&bytes);
     assert_eq!(su_ack_err, new_su_ack_err);
 }
 
-impl Serializable for StartupAckErr {
+impl Serializable for StartUpAckErr {
     fn to_bytes(&self) -> Vec<u8> {
         let mut res: Vec<u8> = vec![self.reason as u8];
         println!("Reason variant: {:?} => u8 repr: {:?}", self.reason, res);
@@ -217,7 +264,7 @@ impl Serializable for StartupAckErr {
 
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut idx = 0;
-        let reason: StartupAckErrReason = {
+        let reason: StartUpAckErrReason = {
             idx += 1;
             bytes[0].try_into().unwrap()
         };
@@ -226,21 +273,21 @@ impl Serializable for StartupAckErr {
             idx += len;
             msg
         };
-        StartupAckErr { reason, err_msg }
+        StartUpAckErr { reason, err_msg }
     }
 }
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Debug)]
-pub enum StartupAckErrReason {
+pub enum StartUpAckErrReason {
     Default,
 }
 
-impl std::convert::TryFrom<u8> for StartupAckErrReason {
+impl std::convert::TryFrom<u8> for StartUpAckErrReason {
     type Error = U8EnumConversionError;
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         Ok(match value {
-            0 => StartupAckErrReason::Default,
+            0 => StartUpAckErrReason::Default,
             _ => return Err(U8EnumConversionError::new(value)),
         })
     }

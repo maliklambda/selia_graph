@@ -9,7 +9,8 @@ pub fn connect() -> Result<Connection, ConnError> {
     let stream =
         TcpStream::connect(get_host_name_full()).map_err(|_| ConnError::NoTcpConnection)?;
     let conn_id = 1234;
-    let mut connection = Connection::new(conn_id, stream);
+    let version = 12345;
+    let mut connection = Connection::new(conn_id, stream, version);
     let conn_req_msg = b"Client requests a connection";
 
     // send conn request
