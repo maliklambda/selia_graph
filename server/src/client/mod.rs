@@ -76,7 +76,7 @@ impl<'a> Client<'a> {
     }
 
     /// Initialize startup.
-    fn startup(&mut self) -> Result<StartUpAck, ConnError> {
+    fn startup(&mut self) -> Result<StartUpAck, ClientError> {
         let _ = self.send_startup();
         println!("Startup has been sent");
 
@@ -84,8 +84,9 @@ impl<'a> Client<'a> {
         let su_ack = {
             let ack = self.recv_startup_ack()?;
             println!("Startup_ack has been received");
+            // startup ack constructed successfully, but the server sent an error
             if ack.is_error() {
-                panic!("Startup ack is error: {:?}", ack);
+                return Err(ClientError::StartUpError(ack.payload.err().unwrap()));
             }
             ack
         };
@@ -108,8 +109,10 @@ impl<'a> Client<'a> {
 
     /// Receives a startup ack from the server.
     pub fn recv_startup_ack(&mut self) -> Result<StartUpAck, ConnError> {
+        println!("receiving startup ack");
         let su_ack = {
             let bytes = self.receive()?;
+            println!("Received bytes: {:?}", bytes);
             StartUpAck::from_bytes(&bytes)
         };
         Ok(su_ack)

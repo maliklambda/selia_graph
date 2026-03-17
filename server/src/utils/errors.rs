@@ -5,11 +5,15 @@ use crate::{
 };
 
 pub mod client_errors {
-    use crate::utils::errors::{AuthError, ConnError, ProtocolError};
+    use crate::{
+        protocol::startup_ack::StartUpAckErr,
+        utils::errors::{AuthError, ConnError, ProtocolError},
+    };
 
     #[derive(Debug)]
     pub enum ClientError {
         ConnectionError(ConnError),
+        StartUpError(StartUpAckErr),
         ProtocolError(ProtocolError),
         AuthenticationError(AuthError),
     }
@@ -22,6 +26,7 @@ pub mod client_errors {
                 Self::ConnectionError(conn_err) => {
                     write!(f, "Client Error (Connection): {conn_err}")
                 }
+                Self::StartUpError(su_err) => write!(f, "Client Error (Startup): {su_err}"),
                 Self::AuthenticationError(auth_err) => {
                     write!(f, "Client Error (Autentication): {auth_err}")
                 }
@@ -32,6 +37,12 @@ pub mod client_errors {
     impl From<ConnError> for ClientError {
         fn from(value: ConnError) -> Self {
             ClientError::ConnectionError(value)
+        }
+    }
+
+    impl From<StartUpAckErr> for ClientError {
+        fn from(value: StartUpAckErr) -> Self {
+            ClientError::StartUpError(value)
         }
     }
 }

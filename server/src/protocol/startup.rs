@@ -7,8 +7,8 @@ use crate::{
 /// Raw startup is then recreated on the server
 #[derive(Debug, PartialEq)]
 pub struct StartUp {
-    headers: StartUpHeaders,
-    payload: StartUpPayload,
+    pub headers: StartUpHeaders,
+    pub payload: StartUpPayload,
 }
 
 impl StartUp {
@@ -69,9 +69,9 @@ impl Serializable for StartUp {
 ///     version   encoding  payload length
 #[derive(Debug, PartialEq)]
 pub struct StartUpHeaders {
-    version: u16,
-    encoding: Encoding,
-    payload_length: u16,
+    pub version: u16,
+    pub encoding: Encoding,
+    pub payload_length: u16,
 }
 
 impl StartUpHeaders {

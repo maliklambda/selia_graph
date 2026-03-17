@@ -23,9 +23,15 @@ fn main() {
             let protocol_version = 12345;
 
             let mut client = Client::new(username, requested_db_name, password, protocol_version);
-            client.connect().unwrap();
-            println!("finished intialization of connection");
-            println!("client: {:?}", client);
+            match client.connect() {
+                Ok(_) => {
+                    println!("Established a connection to the server.");
+                    println!("client: {:?}", client);
+                }
+                Err(err) => {
+                    panic!("Could not establish connection to server due to {err}");
+                }
+            }
         }
         "server" => {
             let server = Server::init(HOST, PORT).expect("Failed to initialize server.");

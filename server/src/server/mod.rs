@@ -6,7 +6,9 @@ use crate::{
         auth_req::AuthReq,
         auth_req_ack::AuthReqAck,
         startup::StartUp,
-        startup_ack::{StartUpAck, StartUpAckHeaders, StartUpAckPayload},
+        startup_ack::{
+            StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
+        },
     },
     serialization::Serializable,
     server::queue::MessageQueue,
@@ -48,7 +50,10 @@ impl Server {
                 Ok(stream) => {
                     println!("Accepting connection");
                     match accept_connection(stream, &self.message_queue) {
-                        Ok(conn) => self.message_queue.push(conn),
+                        Ok(conn) => {
+                            self.message_queue.push(conn);
+                            println!("New message_queue event. MQ: {:?}", self.message_queue);
+                        }
                         Err(err) => println!("Could not Initialize connection: {err}"),
                     }
                 }
@@ -57,7 +62,6 @@ impl Server {
                     println!("Found invalid connection attempt: {err}");
                 }
             }
-            println!("New message_queue event. MQ: {:?}", self.message_queue);
         }
         todo!("handle server shutdown")
     }
@@ -84,6 +88,23 @@ fn accept_connection(
 
     // check for multiple connections for username
     if let (true, existing_conn_id) = mq.contains_username(username) {
+        let su_ack_err = {
+            let payload_err = StartUpAckErr {
+                reason: StartUpAckErrReason::MultipleConnections,
+                err_msg: format!("Duplicate connection for {username}"),
+            };
+            let headers = StartUpAckHeaders::new_error(
+                start_up.headers.version,
+                db_version,
+                payload_err.byte_length().try_into().unwrap(),
+            );
+            StartUpAck::new_error(headers, payload_err)
+        };
+        println!(
+            "Sending DuplicateConnection error msg: {:?}",
+            su_ack_err.to_bytes()
+        );
+        conn.send(&su_ack_err.to_bytes())?;
         return Err(ServerAcceptConnError::DuplicateConnection {
             username: username.to_string(),
             existing_conn_id,
