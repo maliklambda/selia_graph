@@ -9,7 +9,11 @@ use crate::{
     serialization::Serializable,
     server::queue::MessageQueue,
     utils::{
-        auth::generate_salt, errors::{ConnError, ServerAcceptConnError, ServerShutdownError, server_errors::ServerError}, types::Salt
+        auth::get_salt_for_username,
+        errors::{
+            ConnError, ServerAcceptConnError, ServerShutdownError, server_errors::ServerError,
+        },
+        types::Salt,
     },
 };
 
@@ -41,11 +45,9 @@ impl Server {
             match stream {
                 Ok(stream) => {
                     println!("Accepting connection");
-                    if let Ok(conn) = accept_connection(stream) {
-                        self.message_queue.push(conn);
-                    } else {
-                        // log error
-                        println!("Could not initialize connection");
+                    match accept_connection(stream) {
+                        Ok(conn) => self.message_queue.push(conn),
+                        Err(err) => println!("Could not Initialize connection: {err}"),
                     }
                 }
                 Err(err) => {
@@ -80,7 +82,9 @@ fn accept_connection(stream: TcpStream) -> Result<Connection, ServerAcceptConnEr
 
     // send startup_ack
     println!("Sending startup ack...");
-    let salt = send_startup_ack(&mut conn, db_version).unwrap();
+    let salt = get_salt_for_username(username)
+        .map_err(|auth_err| ServerAcceptConnError::AuthenticationFailure(auth_err))?;
+    send_startup_ack(&mut conn, db_version, salt).unwrap();
     println!("Startup ack sent");
 
     // accept AuthReq
@@ -98,21 +102,20 @@ fn recv_startup(conn: &mut Connection) -> Result<StartUp, ConnError> {
     Ok(su)
 }
 
-fn send_startup_ack(conn: &mut Connection, db_version: u16) -> Result<Salt, ConnError> {
-    let (su_ack, salt) = {
-        let salt = generate_salt();
+fn send_startup_ack(conn: &mut Connection, db_version: u16, salt: Salt) -> Result<(), ConnError> {
+    let su_ack = {
         let payload = StartUpAckPayload::new(salt);
         let headers = StartUpAckHeaders::new_success(
             conn.version,
             db_version,
             payload.byte_length().try_into().unwrap(),
         );
-        (StartUpAck::new_success(headers, payload), salt)
+        StartUpAck::new_success(headers, payload)
     };
     println!("Sending StartUpAck: {:?}", su_ack);
     println!("StartUpAck as bytes: {:?}", su_ack.to_bytes());
     conn.send(&su_ack.to_bytes())?;
-    Ok(salt)
+    Ok(())
 }
 
 fn recv_auth_req(conn: &mut Connection) -> Result<(), ConnError> {

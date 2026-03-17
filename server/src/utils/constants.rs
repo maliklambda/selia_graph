@@ -10,4 +10,4 @@ pub mod server {
 }
 
 pub const TCP_CONNECT_RETIRES: u8 = 5;
-pub const HASH_LENGTH: usize = 40;
+pub const HASH_LENGTH_BYTES: usize = 32; // sha256 (256 bits == 32bytes)

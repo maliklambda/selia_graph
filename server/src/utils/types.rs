@@ -1,4 +1,4 @@
-use crate::utils::{constants::HASH_LENGTH, errors::U8EnumConversionError};
+use crate::utils::{constants::HASH_LENGTH_BYTES, errors::U8EnumConversionError};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -17,4 +17,4 @@ impl std::convert::TryFrom<u8> for Encoding {
 }
 
 pub type Salt = u16;
-pub type Hash = [u8; HASH_LENGTH];
+pub type Hash = [u8; HASH_LENGTH_BYTES];

@@ -1,22 +1,32 @@
-use crate::serialization::Serializable;
-
-
+use crate::{
+    serialization::Serializable,
+    utils::{constants::HASH_LENGTH_BYTES, types::Hash},
+};
 
 #[derive(Debug)]
 pub struct AuthReq {
+    hashed_password: Hash,
 }
 
 impl AuthReq {
-
+    pub fn new(hashed_password: Hash) -> Self {
+        Self { hashed_password }
+    }
 }
-
 
 impl Serializable for AuthReq {
     fn to_bytes(&self) -> Vec<u8> {
-        todo!("Auth request to bytes (Serializable)")
+        self.hashed_password.to_vec()
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
-        todo!("Auth request from bytes (Serializable)")
+        assert_eq!(
+            bytes.len(),
+            HASH_LENGTH_BYTES,
+            "Found invalid byte array for AuthReq::from_bytes(). Expected length {expected}, got {got}",
+            expected = HASH_LENGTH_BYTES,
+            got = bytes.len()
+        );
+        AuthReq::new(bytes.try_into().unwrap())
     }
 }

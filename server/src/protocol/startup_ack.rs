@@ -157,7 +157,11 @@ impl Serializable for StartUpAckHeaders {
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut idx = 0;
         let version_ack = {
-            assert!(bytes.len() > idx);
+            assert!(
+                bytes.len() > idx,
+                "Expected startup ack header to be of max size {} but got {idx}",
+                bytes.len()
+            );
             let version = u16::from_le_bytes(
                 bytes[idx..idx + std::mem::size_of::<u16>()]
                     .try_into()

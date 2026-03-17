@@ -1,15 +1,15 @@
+use std::fmt::Display;
+
 use crate::protocol::startup_ack::StartUpAckErr;
-
-
 
 pub mod client_errors {
     use crate::utils::errors::{AuthError, ConnError, ProtocolError};
 
     #[derive(Debug)]
     pub enum ClientError {
-        ConnectionError (ConnError),
-        ProtocolError (ProtocolError),
-        AuthenticationError (AuthError),
+        ConnectionError(ConnError),
+        ProtocolError(ProtocolError),
+        AuthenticationError(AuthError),
     }
 
     impl std::error::Error for ClientError {}
@@ -17,8 +17,12 @@ pub mod client_errors {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 Self::ProtocolError(prot_err) => write!(f, "Client Error (Protocol): {prot_err}"),
-                Self::ConnectionError(conn_err) => write!(f, "Client Error (Connection): {conn_err}"),
-                Self::AuthenticationError(auth_err) => write!(f, "Client Error (Autentication): {auth_err}"),
+                Self::ConnectionError(conn_err) => {
+                    write!(f, "Client Error (Connection): {conn_err}")
+                }
+                Self::AuthenticationError(auth_err) => {
+                    write!(f, "Client Error (Autentication): {auth_err}")
+                }
             }
         }
     }
@@ -29,7 +33,6 @@ pub mod client_errors {
         }
     }
 }
-
 
 pub mod server_errors {
     use crate::utils::errors::ServerShutdownError;
@@ -43,17 +46,17 @@ pub mod server_errors {
     impl std::fmt::Display for ServerError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
-                Self::UnexpectedShutDown(shutdown_err) => write!(f, "Server Error (Unexpected shut down): {shutdown_err}"),
+                Self::UnexpectedShutDown(shutdown_err) => {
+                    write!(f, "Server Error (Unexpected shut down): {shutdown_err}")
+                }
             }
         }
     }
-
 }
-
 
 #[derive(Debug)]
 pub enum AuthError {
-    UnknownUser {name: String},
+    UnknownUser { name: String },
     InvalidPassword,
     InsufficientPermissions,
 }
@@ -69,7 +72,6 @@ impl std::fmt::Display for AuthError {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub enum ConnError {
@@ -125,13 +127,28 @@ impl std::fmt::Display for ServerShutdownError {
 }
 
 #[derive(Debug)]
-pub struct ServerAcceptConnError {}
+pub enum ServerAcceptConnError {
+    BadConnection(ConnError),
+    AuthenticationFailure(AuthError),
+}
 
 impl std::error::Error for ServerAcceptConnError {}
 
 impl std::fmt::Display for ServerAcceptConnError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        let build_msg: fn(&str, Box<dyn Display>) -> String =
+            |reason: &str, err: Box<dyn Display>| {
+                format!("Server refused connection due to {reason}: {err}")
+            };
+
+        match self {
+            Self::BadConnection(conn_err) => {
+                write!(f, "{}", build_msg("failed connection", Box::new(conn_err)))
+            }
+            Self::AuthenticationFailure(auth_err) => {
+                write!(f, "{}", build_msg("", Box::new(auth_err)))
+            }
+        }
     }
 }
 
