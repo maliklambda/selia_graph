@@ -93,15 +93,19 @@ fn accept_connection(stream: TcpStream) -> Result<Connection, ServerAcceptConnEr
     println!("Accepted auth request: {:?}", accepted_auth_req);
 
     check_password(username, accepted_auth_req.hashed_password).map_err(|err| {
+        // send erroneours auth request ack
         conn.send(&AuthReqAck::new_failure(err.clone()).to_bytes())
             .unwrap();
         ServerAcceptConnError::AuthenticationFailure(err)
     })?;
 
     // send AuthReqAck
-    todo!("send auth req ack");
+    let auth_req_ack = AuthReqAck::new_success();
+    println!("Sending this auth req ack: {:?}", auth_req_ack);
+    println!("as bytes: {:?}", auth_req_ack.to_bytes());
+    conn.send(&auth_req_ack.to_bytes())?;
 
-    todo!("finish server establish connection")
+    Ok(conn)
 }
 
 fn send_startup_ack(conn: &mut Connection, db_version: u16, salt: Salt) -> Result<(), ConnError> {

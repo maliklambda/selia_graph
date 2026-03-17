@@ -137,6 +137,7 @@ impl<'a> Client<'a> {
             let bytes = self.receive()?;
             AuthReqAck::from_bytes(&bytes)
         };
+        println!("Received auth request ack: {:?}", auth_req_ack);
         if auth_req_ack.header.is_authenticated {
             assert!(
                 auth_req_ack.payload.is_ok(),

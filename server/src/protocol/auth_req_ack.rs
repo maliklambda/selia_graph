@@ -1,4 +1,4 @@
-use crate::{serialization::Serializable, utils::errors::AuthError};
+use crate::{protocol::Header, serialization::Serializable, utils::errors::AuthError};
 
 #[derive(Debug)]
 pub struct AuthReqAck {
@@ -40,11 +40,47 @@ impl AuthReqAck {
 
 impl Serializable for AuthReqAck {
     fn to_bytes(&self) -> Vec<u8> {
-        todo!("auth req ack to bytes")
+        let payload_bytes = match &self.payload {
+            Ok(payload) => {
+                assert!(self.header.is_authenticated);
+                payload.to_bytes()
+            }
+            Err(payload_err) => {
+                assert!(!self.header.is_authenticated);
+                payload_err.to_bytes()
+            }
+        };
+        assert_eq!(
+            self.header.payload_length,
+            payload_bytes.len().try_into().unwrap(),
+            "Expected payload length in header to be {}, got: {}",
+            payload_bytes.len(),
+            self.header.payload_length
+        );
+
+        [self.header.to_bytes(), payload_bytes].concat()
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
-        todo!("auth req ack from bytes")
+        println!("mem size of AuthReqAckHeader: {}", std::mem::size_of::<AuthReqAckHeader>());
+        let header = AuthReqAckHeader::from_bytes(bytes);
+        assert_eq!(
+            header.byte_length() as u16 + header.payload_length,
+            bytes.len() as u16,
+            "Expected length of bytes array for AuthReqAck to be {} (header length) + {} (payload_length), got: {}",
+            header.byte_length(),
+            header.payload_length,
+            bytes.len()
+        );
+        println!("got headers: {:?}", header);
+        println!("got bytes: {:?}", bytes);
+        let payload = if header.is_authenticated {
+            Ok(AuthReqAckPayload::from_bytes(&bytes[header.byte_length()..]))
+        } else {
+            println!("Error");
+            Err(AuthReqAckError::from_bytes(&bytes[header.byte_length()..]))
+        };
+        AuthReqAck { header, payload }
     }
 }
 
@@ -52,6 +88,12 @@ impl Serializable for AuthReqAck {
 pub struct AuthReqAckHeader {
     pub is_authenticated: bool,
     pub payload_length: u16,
+}
+
+impl Header for AuthReqAckHeader {
+    fn size(&self) -> usize {
+        std::mem::size_of::<u8>() + std::mem::size_of::<u16>()
+    }
 }
 
 impl Serializable for AuthReqAckHeader {
@@ -71,8 +113,9 @@ impl Serializable for AuthReqAckHeader {
             );
             let ia = bytes[idx];
             idx += std::mem::size_of::<u8>();
-            ia == 0
+            ia == 1
         };
+        println!("idx after is_auth (u8): {idx}");
         let payload_length = {
             assert!(
                 bytes.len() > idx,
@@ -87,9 +130,10 @@ impl Serializable for AuthReqAckHeader {
             idx += std::mem::size_of::<u16>();
             pl
         };
+        println!("idx after payload len (u16): {idx}");
         assert_eq!(
             idx,
-            bytes.len(),
+            bytes.len()-1,
             "Got more bytes than expected for constructing AuthReqAckHeader. Got {}, expected: {idx}",
             bytes.len()
         );
