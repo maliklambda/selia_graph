@@ -21,6 +21,7 @@ use crate::{
 pub mod legacy;
 mod queue;
 
+#[derive(Debug)]
 pub struct Server {
     version: u16,
     listener: TcpListener,
@@ -56,6 +57,7 @@ impl Server {
                     println!("Found invalid connection attempt: {err}");
                 }
             }
+            println!("New message_queue event. MQ: {:?}", self.message_queue);
         }
         todo!("handle server shutdown")
     }

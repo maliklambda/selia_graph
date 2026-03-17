@@ -1,7 +1,7 @@
 use std::net::TcpStream;
 
 use crate::{
-    connection::Connection,
+    connection::{ConnStatus, Connection},
     protocol::{
         auth_req::AuthReq,
         auth_req_ack::{AuthReqAck, AuthReqAckPayload},
@@ -16,6 +16,7 @@ use crate::{
     },
 };
 
+#[derive(Debug)]
 pub struct Client<'a> {
     username: &'a str,
     requested_db_name: &'a str,
@@ -43,15 +44,19 @@ impl<'a> Client<'a> {
 
     /// Entry point for client connection.
     /// Connect (unconnected) client to database.
-    pub fn connect(mut self) -> Result<Connection, ClientError> {
+    /// mutates Client to add connection to it
+    pub fn connect(&mut self) -> Result<(), ClientError> {
         self.connection = Some(self.init_connection()?);
+
 
         let su_ack = self.startup()?;
         println!("Startup completed");
+        self.connection.as_mut().unwrap().status = ConnStatus::Authenticating;
 
         let _ = self.authenticate_connection(su_ack)?;
+        self.connection.as_mut().unwrap().status = ConnStatus::Authenticated;
 
-        todo!("Finish initialize connection")
+        Ok(())
     }
 
     pub fn send(&mut self, msg: &[u8]) -> Result<(), ConnError> {

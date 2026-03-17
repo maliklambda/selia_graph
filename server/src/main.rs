@@ -22,10 +22,10 @@ fn main() {
             let password = "password";
             let protocol_version = 12345;
 
-            let client = Client::new(username, requested_db_name, password, protocol_version);
-            let conn = client.connect().unwrap();
+            let mut client = Client::new(username, requested_db_name, password, protocol_version);
+            client.connect().unwrap();
             println!("finished intialization of connection");
-            println!("Conn: {:?}", conn);
+            println!("client: {:?}", client);
         }
         "server" => {
             let server = Server::init(HOST, PORT).unwrap();

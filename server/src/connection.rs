@@ -8,7 +8,9 @@ use crate::utils::errors::ConnError;
 #[derive(Debug)]
 pub enum ConnStatus {
     Connecting,
+    StartUp,
     Authenticating,
+    Authenticated,
     Idle,
     Busy,
     Closed,

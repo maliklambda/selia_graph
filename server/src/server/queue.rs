@@ -5,6 +5,7 @@ use std::{
 
 use crate::connection::Connection;
 
+#[derive(Debug)]
 pub struct MessageQueue {
     pub messages: Mutex<VecDeque<Connection>>,
     pub condvar: Condvar,
