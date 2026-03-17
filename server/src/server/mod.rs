@@ -4,6 +4,7 @@ use crate::{
     connection::Connection,
     protocol::{
         auth_req::AuthReq,
+        auth_req_ack::AuthReqAck,
         startup::StartUp,
         startup_ack::{StartUpAck, StartUpAckHeaders, StartUpAckPayload},
     },
@@ -11,9 +12,7 @@ use crate::{
     server::queue::MessageQueue,
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
-        errors::{
-            AuthError, ConnError, ServerAcceptConnError, server_errors::ServerError
-        },
+        errors::{AuthError, ConnError, ServerAcceptConnError, server_errors::ServerError},
         mocks::{requested_db_exists, username_exists},
         types::{PasswordHash, Salt},
     },
@@ -93,7 +92,11 @@ fn accept_connection(stream: TcpStream) -> Result<Connection, ServerAcceptConnEr
     let accepted_auth_req = AuthReq::from_bytes(&conn.receive()?);
     println!("Accepted auth request: {:?}", accepted_auth_req);
 
-    check_password(username, accepted_auth_req.hashed_password).map_err(ServerAcceptConnError::AuthenticationFailure)?;
+    check_password(username, accepted_auth_req.hashed_password).map_err(|err| {
+        conn.send(&AuthReqAck::new_failure(err.clone()).to_bytes())
+            .unwrap();
+        ServerAcceptConnError::AuthenticationFailure(err)
+    })?;
 
     // send AuthReqAck
     todo!("send auth req ack");
@@ -136,10 +139,15 @@ fn check_requested_credentials(
     Ok(())
 }
 
-fn check_password (username: &str, hashed_password: PasswordHash) -> Result<(), AuthError> {
+fn check_password(username: &str, hashed_password: PasswordHash) -> Result<(), AuthError> {
     let pw_hash = get_users_password_hash(username)?;
     if pw_hash != hashed_password {
-        return Err(AuthError::InvalidPassword)
+        return Err(AuthError::InvalidPassword);
     }
     Ok(())
+}
+
+fn send_auth_req_ack(conn: &mut Connection) {
+    // let auth_req_ack = {
+    // }
 }

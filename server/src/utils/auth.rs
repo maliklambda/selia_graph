@@ -33,10 +33,15 @@ pub fn hash_password(password: &str, salt: Salt) -> PasswordHash {
     h.into()
 }
 
-pub fn get_users_password_hash (username: &str) -> Result<PasswordHash, AuthError> {
-    let user = MOCKED_USER_CREDENTIALS.iter().filter(|(name, _, _)| *name == username).collect::<Vec<_>>();
+pub fn get_users_password_hash(username: &str) -> Result<PasswordHash, AuthError> {
+    let user = MOCKED_USER_CREDENTIALS
+        .iter()
+        .filter(|(name, _, _)| *name == username)
+        .collect::<Vec<_>>();
     if user.len() != 1 {
-        return Err(AuthError::UnknownUser { name: username.to_string() })
+        return Err(AuthError::UnknownUser {
+            name: username.to_string(),
+        });
     }
     let (password, salt) = {
         let user = user[0];

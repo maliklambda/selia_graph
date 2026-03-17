@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::protocol::startup_ack::StartUpAckErr;
+use crate::{protocol::startup_ack::StartUpAckErr, serialization::Serializable};
 
 pub mod client_errors {
     use crate::utils::errors::{AuthError, ConnError, ProtocolError};
@@ -54,7 +54,7 @@ pub mod server_errors {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AuthError {
     UnknownUser { name: String },
     InvalidPassword,
@@ -70,6 +70,16 @@ impl std::fmt::Display for AuthError {
             Self::InvalidPassword => write!(f, "Incorrect password"),
             Self::InsufficientPermissions => write!(f, "User does not have sufficient permissions"),
         }
+    }
+}
+
+impl Serializable for AuthError {
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Self {
+        todo!()
     }
 }
 
