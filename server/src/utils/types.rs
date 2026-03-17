@@ -17,4 +17,4 @@ impl std::convert::TryFrom<u8> for Encoding {
 }
 
 pub type Salt = u16;
-pub type Hash = [u8; HASH_LENGTH_BYTES];
+pub type PasswordHash = [u8; HASH_LENGTH_BYTES];

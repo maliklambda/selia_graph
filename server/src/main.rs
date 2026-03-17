@@ -18,8 +18,8 @@ fn main() {
     match arg.as_str() {
         "client" => {
             let username = "Edos";
-            let requested_db_name = "clients";
-            let password = "super_secret";
+            let requested_db_name = "products";
+            let password = "password";
             let protocol_version = 12345;
 
             let client = Client::new(username, requested_db_name, password, protocol_version);

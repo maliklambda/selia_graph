@@ -130,6 +130,7 @@ impl std::fmt::Display for ServerShutdownError {
 pub enum ServerAcceptConnError {
     BadConnection(ConnError),
     AuthenticationFailure(AuthError),
+    NonExistingDb(String),
 }
 
 impl std::error::Error for ServerAcceptConnError {}
@@ -146,9 +147,29 @@ impl std::fmt::Display for ServerAcceptConnError {
                 write!(f, "{}", build_msg("failed connection", Box::new(conn_err)))
             }
             Self::AuthenticationFailure(auth_err) => {
-                write!(f, "{}", build_msg("", Box::new(auth_err)))
+                write!(
+                    f,
+                    "{}",
+                    build_msg("failed authentication", Box::new(auth_err))
+                )
+            }
+            Self::NonExistingDb(db_name) => {
+                write!(
+                    f,
+                    "{}",
+                    build_msg(
+                        "non-existing db",
+                        Box::new(format!("database '{}' does not exist", db_name))
+                    )
+                )
             }
         }
+    }
+}
+
+impl From<ConnError> for ServerAcceptConnError {
+    fn from(value: ConnError) -> Self {
+        Self::BadConnection(value)
     }
 }
 

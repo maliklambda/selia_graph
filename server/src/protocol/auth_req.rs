@@ -1,15 +1,15 @@
 use crate::{
     serialization::Serializable,
-    utils::{constants::HASH_LENGTH_BYTES, types::Hash},
+    utils::{constants::HASH_LENGTH_BYTES, types::PasswordHash},
 };
 
 #[derive(Debug)]
 pub struct AuthReq {
-    hashed_password: Hash,
+    pub hashed_password: PasswordHash,
 }
 
 impl AuthReq {
-    pub fn new(hashed_password: Hash) -> Self {
+    pub fn new(hashed_password: PasswordHash) -> Self {
         Self { hashed_password }
     }
 }

@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 use crate::utils::{
     errors::AuthError,
     mocks::MOCKED_USER_CREDENTIALS,
-    types::{Hash, Salt},
+    types::{PasswordHash, Salt},
 };
 
 pub fn get_salt_for_username(username: &str) -> Result<Salt, AuthError> {
@@ -27,11 +27,29 @@ pub fn generate_salt() -> Salt {
     rand::rng().random::<u16>() as Salt
 }
 
-pub fn hash_password(password: &str, salt: Salt) -> Hash {
+pub fn hash_password(password: &str, salt: Salt) -> PasswordHash {
     // TODO: I want to implement hashing function myself.
     let h = Sha256::digest(format!("{password}{salt}"));
     h.into()
 }
+
+pub fn get_users_password_hash (username: &str) -> Result<PasswordHash, AuthError> {
+    let user = MOCKED_USER_CREDENTIALS.iter().filter(|(name, _, _)| *name == username).collect::<Vec<_>>();
+    if user.len() != 1 {
+        return Err(AuthError::UnknownUser { name: username.to_string() })
+    }
+    let (password, salt) = {
+        let user = user[0];
+        (user.1, user.2)
+    };
+    Ok(hash_password(password, salt))
+}
+
+/*
+*
+* TESTS
+*
+*/
 
 #[test]
 fn test_auth() {

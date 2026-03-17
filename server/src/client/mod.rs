@@ -12,8 +12,7 @@ use crate::{
     utils::{
         auth::hash_password,
         constants::server::get_host_name_full,
-        errors::{AuthError, ConnError, ProtocolError, client_errors::ClientError},
-        types::Hash,
+        errors::{ConnError, ProtocolError, client_errors::ClientError},
     },
 };
 

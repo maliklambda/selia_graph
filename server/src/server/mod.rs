@@ -3,17 +3,19 @@ use std::net::{TcpListener, TcpStream};
 use crate::{
     connection::Connection,
     protocol::{
-        startup::{StartUp, StartUpHeaders, StartUpPayload},
+        auth_req::AuthReq,
+        startup::StartUp,
         startup_ack::{StartUpAck, StartUpAckHeaders, StartUpAckPayload},
     },
     serialization::Serializable,
     server::queue::MessageQueue,
     utils::{
-        auth::get_salt_for_username,
+        auth::{get_salt_for_username, get_users_password_hash},
         errors::{
-            ConnError, ServerAcceptConnError, ServerShutdownError, server_errors::ServerError,
+            AuthError, ConnError, ServerAcceptConnError, server_errors::ServerError
         },
-        types::Salt,
+        mocks::{requested_db_exists, username_exists},
+        types::{PasswordHash, Salt},
     },
 };
 
@@ -56,7 +58,7 @@ impl Server {
                 }
             }
         }
-        todo!()
+        todo!("handle server shutdown")
     }
 }
 
@@ -68,38 +70,35 @@ fn accept_connection(stream: TcpStream) -> Result<Connection, ServerAcceptConnEr
     let mut conn = Connection::new(conn_id, stream, version);
 
     // accept startup
-    println!("Receiving startup...");
-    let start_up = recv_startup(&mut conn).unwrap();
-    println!("Received startup: {:?}", start_up);
-    println!("Startup as bytes: {:?}", start_up.to_bytes());
+    let start_up = StartUp::from_bytes(&conn.receive()?);
 
     // process startup
     let (username, requested_db_name) = {
         let payload = start_up.extract_payload();
         (&payload.username, &payload.requested_db_name)
     };
+
     // check if username and requested_db exist
+    check_requested_credentials(username, requested_db_name)?;
+    // send error response if credentials are invalid
 
     // send startup_ack
     println!("Sending startup ack...");
-    let salt = get_salt_for_username(username)
-        .map_err(|auth_err| ServerAcceptConnError::AuthenticationFailure(auth_err))?;
+    let salt =
+        get_salt_for_username(username).map_err(ServerAcceptConnError::AuthenticationFailure)?;
     send_startup_ack(&mut conn, db_version, salt).unwrap();
     println!("Startup ack sent");
 
     // accept AuthReq
-    let auth_req = recv_auth_req(&mut conn).unwrap();
+    let accepted_auth_req = AuthReq::from_bytes(&conn.receive()?);
+    println!("Accepted auth request: {:?}", accepted_auth_req);
 
-    // authenticate connection
-    todo!()
-}
+    check_password(username, accepted_auth_req.hashed_password).map_err(ServerAcceptConnError::AuthenticationFailure)?;
 
-fn recv_startup(conn: &mut Connection) -> Result<StartUp, ConnError> {
-    let su = {
-        let bytes = conn.receive()?;
-        StartUp::from_bytes(&bytes)
-    };
-    Ok(su)
+    // send AuthReqAck
+    todo!("send auth req ack");
+
+    todo!("finish server establish connection")
 }
 
 fn send_startup_ack(conn: &mut Connection, db_version: u16, salt: Salt) -> Result<(), ConnError> {
@@ -118,7 +117,29 @@ fn send_startup_ack(conn: &mut Connection, db_version: u16, salt: Salt) -> Resul
     Ok(())
 }
 
-fn recv_auth_req(conn: &mut Connection) -> Result<(), ConnError> {
-    // Result<AuthReq, ConnError> {
-    todo!("Receive auth request")
+fn check_requested_credentials(
+    username: &str,
+    requested_db_name: &str,
+) -> Result<(), ServerAcceptConnError> {
+    if !requested_db_exists(requested_db_name) {
+        return Err(ServerAcceptConnError::NonExistingDb(
+            requested_db_name.to_string(),
+        ));
+    }
+    if !username_exists(username) {
+        return Err(ServerAcceptConnError::AuthenticationFailure(
+            crate::utils::errors::AuthError::UnknownUser {
+                name: username.to_string(),
+            },
+        ));
+    }
+    Ok(())
+}
+
+fn check_password (username: &str, hashed_password: PasswordHash) -> Result<(), AuthError> {
+    let pw_hash = get_users_password_hash(username)?;
+    if pw_hash != hashed_password {
+        return Err(AuthError::InvalidPassword)
+    }
+    Ok(())
 }
