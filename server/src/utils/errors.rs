@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-use crate::{protocol::startup_ack::StartUpAckErr, serialization::Serializable};
+use crate::{
+    protocol::startup_ack::StartUpAckErr, serialization::Serializable, server::legacy::ConnectionId,
+};
 
 pub mod client_errors {
     use crate::utils::errors::{AuthError, ConnError, ProtocolError};
@@ -139,6 +141,10 @@ impl std::fmt::Display for ServerShutdownError {
 #[derive(Debug)]
 pub enum ServerAcceptConnError {
     BadConnection(ConnError),
+    DuplicateConnection {
+        username: String,
+        existing_conn_id: ConnectionId,
+    },
     AuthenticationFailure(AuthError),
     NonExistingDb(String),
 }
@@ -170,6 +176,21 @@ impl std::fmt::Display for ServerAcceptConnError {
                     build_msg(
                         "non-existing db",
                         Box::new(format!("database '{}' does not exist", db_name))
+                    )
+                )
+            }
+            Self::DuplicateConnection {
+                username,
+                existing_conn_id,
+            } => {
+                write!(
+                    f,
+                    "{}",
+                    build_msg(
+                        "duplicate connection",
+                        Box::new(format!(
+                            "connection for user '{username}' already exists: {existing_conn_id}"
+                        ))
                     )
                 )
             }

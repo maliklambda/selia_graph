@@ -48,7 +48,6 @@ impl<'a> Client<'a> {
     pub fn connect(&mut self) -> Result<(), ClientError> {
         self.connection = Some(self.init_connection()?);
 
-
         let su_ack = self.startup()?;
         println!("Startup completed");
         self.connection.as_mut().unwrap().status = ConnStatus::Authenticating;

@@ -47,7 +47,7 @@ impl Server {
             match stream {
                 Ok(stream) => {
                     println!("Accepting connection");
-                    match accept_connection(stream) {
+                    match accept_connection(stream, &self.message_queue) {
                         Ok(conn) => self.message_queue.push(conn),
                         Err(err) => println!("Could not Initialize connection: {err}"),
                     }
@@ -63,7 +63,10 @@ impl Server {
     }
 }
 
-fn accept_connection(stream: TcpStream) -> Result<Connection, ServerAcceptConnError> {
+fn accept_connection(
+    stream: TcpStream,
+    mq: &MessageQueue,
+) -> Result<Connection, ServerAcceptConnError> {
     let db_version = 12345;
     // init connection (server side)
     let conn_id = 1234;
@@ -78,6 +81,15 @@ fn accept_connection(stream: TcpStream) -> Result<Connection, ServerAcceptConnEr
         let payload = start_up.extract_payload();
         (&payload.username, &payload.requested_db_name)
     };
+
+    // check for multiple connections for username
+    if let (true, existing_conn_id) = mq.contains_username(username) {
+        return Err(ServerAcceptConnError::DuplicateConnection {
+            username: username.to_string(),
+            existing_conn_id,
+        });
+    }
+    conn.set_username(username.to_string());
 
     // check if username and requested_db exist
     check_requested_credentials(username, requested_db_name)?;
@@ -151,9 +163,4 @@ fn check_password(username: &str, hashed_password: PasswordHash) -> Result<(), A
         return Err(AuthError::InvalidPassword);
     }
     Ok(())
-}
-
-fn send_auth_req_ack(conn: &mut Connection) {
-    // let auth_req_ack = {
-    // }
 }

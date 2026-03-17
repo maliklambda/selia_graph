@@ -21,6 +21,7 @@ pub struct Connection {
     pub conn_id: u64,
     pub status: ConnStatus,
     pub version: u16,
+    pub username: Option<String>,
 
     pub stream: TcpStream,
     pub buf_read: Vec<u8>,
@@ -33,10 +34,15 @@ impl Connection {
             conn_id,
             status: ConnStatus::Connecting,
             version,
+            username: None,
             stream,
             buf_read: vec![],
             buf_write: vec![],
         }
+    }
+
+    pub fn set_username(&mut self, username: String) {
+        self.username = Some(username);
     }
 
     pub fn send(&mut self, msg: &[u8]) -> Result<(), ConnError> {

@@ -28,9 +28,9 @@ fn main() {
             println!("client: {:?}", client);
         }
         "server" => {
-            let server = Server::init(HOST, PORT).unwrap();
+            let server = Server::init(HOST, PORT).expect("Failed to initialize server.");
             println!("Server initialized");
-            server.run().unwrap();
+            server.run().expect("Runtime server error");
         }
         _ => panic!("Unknown argument: {arg}"),
     }
