@@ -1,19 +1,16 @@
 use std::net::TcpStream;
 
 use crate::{
-    connection::{ConnStatus, Connection},
-    protocol::{
+    connection::{ConnStatus, Connection}, protocol::{
         auth_req::AuthReq,
         auth_req_ack::{AuthReqAck, AuthReqAckPayload},
         startup::StartUp,
         startup_ack::StartUpAck,
-    },
-    serialization::Serializable,
-    utils::{
+    }, query::{QueryRequest, QueryResponse, QueryResponsePackage}, serialization::Serializable, utils::{
         auth::hash_password,
         constants::server::get_host_name_full,
         errors::{ConnError, ProtocolError, client_errors::ClientError},
-    },
+    }
 };
 
 #[derive(Debug)]
@@ -42,10 +39,56 @@ impl<'a> Client<'a> {
         }
     }
 
+    /// Execute a single query:
+    /// Client sends request to server to execute the query.
+    /// Server returns result of query execution in batched packages.
+    pub fn execute_query (&mut self, query_str: &str) -> Result<QueryResponse, ClientError> {
+        if self.connection.is_none() {
+            return Err(ClientError::ConnectionClosedError);
+        }
+
+        let query_req = QueryRequest::new(query_str);
+        let mut response_packages: Vec<QueryResponsePackage> = vec![];
+
+        // send query request
+        self.connection.as_mut().unwrap().send(&query_req.to_bytes())?;
+        loop {
+            let query_res = {
+                let bytes = self.connection.as_mut().unwrap().receive()?;
+                QueryResponsePackage::from_bytes(&bytes)
+            };
+            match query_res {
+                QueryResponsePackage::Error(err) => return Err(err),
+                QueryResponsePackage::Eof => break,
+                _ => response_packages.push(query_res)
+            }
+
+        }
+
+        todo!()
+    }
+
+
+
+    /// Initialize a connection to the server.
+    ///
+    pub fn connect(&mut self) -> Result<(), ClientError> {
+        match self.establish_connect() {
+            Ok(_) => {
+                println!("Established a connection to the server.");
+                println!("client: {:?}", &self);
+                Ok(())
+            }
+            Err(err) => {
+                panic!("Could not establish connection to server due to {err}");
+            }
+        }
+    }
+
     /// Entry point for client connection.
     /// Connect (unconnected) client to database.
     /// mutates Client to add connection to it
-    pub fn connect(&mut self) -> Result<(), ClientError> {
+    pub fn establish_connect(&mut self) -> Result<(), ClientError> {
         self.connection = Some(self.init_connection()?);
 
         let su_ack = self.startup()?;

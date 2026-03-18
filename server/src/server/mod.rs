@@ -1,4 +1,4 @@
-use std::net::{TcpListener, TcpStream};
+use std::{net::{TcpListener, TcpStream}, sync::Mutex};
 
 use crate::{
     connection::Connection,
@@ -11,7 +11,7 @@ use crate::{
         },
     },
     serialization::Serializable,
-    server::queue::MessageQueue,
+    server::{open_connections::OpenConnections, queue::MessageQueue},
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
         errors::{AuthError, ConnError, ServerAcceptConnError, server_errors::ServerError},
@@ -22,11 +22,13 @@ use crate::{
 
 pub mod legacy;
 mod queue;
+mod open_connections;
 
 #[derive(Debug)]
 pub struct Server {
     version: u16,
     listener: TcpListener,
+    open_connections: OpenConnections,
     message_queue: MessageQueue,
 }
 
@@ -39,6 +41,7 @@ impl Server {
         Ok(Server {
             version,
             listener,
+            open_connections: OpenConnections::new(),
             message_queue,
         })
     }
@@ -49,10 +52,10 @@ impl Server {
             match stream {
                 Ok(stream) => {
                     println!("Accepting connection");
-                    match accept_connection(stream, &self.message_queue) {
+                    match accept_connection(stream, &self.open_connections) {
                         Ok(conn) => {
-                            self.message_queue.push(conn);
-                            println!("New message_queue event. MQ: {:?}", self.message_queue);
+                            self.open_connections.push(conn);
+                            println!("New connection. open connections: {:?}", self.open_connections);
                         }
                         Err(err) => println!("Could not Initialize connection: {err}"),
                     }
@@ -69,7 +72,7 @@ impl Server {
 
 fn accept_connection(
     stream: TcpStream,
-    mq: &MessageQueue,
+    open_connections: &OpenConnections,
 ) -> Result<Connection, ServerAcceptConnError> {
     let db_version = 12345;
     // init connection (server side)
@@ -85,9 +88,10 @@ fn accept_connection(
         let payload = start_up.extract_payload();
         (&payload.username, &payload.requested_db_name)
     };
+    conn.username = Some(username.to_string());
 
     // check for multiple connections for username
-    if let (true, existing_conn_id) = mq.contains_username(username) {
+    if let (true, existing_conn_id) = open_connections.contains_username(username) {
         let su_ack_err = {
             let payload_err = StartUpAckErr {
                 reason: StartUpAckErrReason::MultipleConnections,

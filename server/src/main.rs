@@ -9,6 +9,7 @@ mod connection;
 mod protocol;
 mod serialization;
 mod server;
+mod query;
 mod utils;
 
 fn main() {
@@ -23,15 +24,9 @@ fn main() {
             let protocol_version = 12345;
 
             let mut client = Client::new(username, requested_db_name, password, protocol_version);
-            match client.connect() {
-                Ok(_) => {
-                    println!("Established a connection to the server.");
-                    println!("client: {:?}", client);
-                }
-                Err(err) => {
-                    panic!("Could not establish connection to server due to {err}");
-                }
-            }
+            client.connect().unwrap();
+
+            client.execute_query("GET NODE 12345").unwrap();
         }
         "server" => {
             let server = Server::init(HOST, PORT).expect("Failed to initialize server.");

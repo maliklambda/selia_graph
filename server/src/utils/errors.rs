@@ -14,6 +14,7 @@ pub mod client_errors {
     pub enum ClientError {
         ConnectionError(ConnError),
         StartUpError(StartUpAckErr),
+        ConnectionClosedError,
         ProtocolError(ProtocolError),
         AuthenticationError(AuthError),
     }
@@ -26,6 +27,7 @@ pub mod client_errors {
                 Self::ConnectionError(conn_err) => {
                     write!(f, "Client Error (Connection): {conn_err}")
                 }
+                Self::ConnectionClosedError => write!(f, "Client Error (ConnectionClosed): Connection to server has been closed unexpectedly"),
                 Self::StartUpError(su_err) => write!(f, "Client Error (Startup): {su_err}"),
                 Self::AuthenticationError(auth_err) => {
                     write!(f, "Client Error (Autentication): {auth_err}")
