@@ -1,9 +1,19 @@
-use crate::{protocol::Header, serialization::Serializable, utils::errors::AuthError};
+use crate::{protocol::{Header, messages::{FromMessageError, Message, MessageAble}}, serialization::Serializable, utils::errors::AuthError};
 
 #[derive(Debug)]
 pub struct AuthReqAck {
     pub header: AuthReqAckHeader,
     pub payload: Result<AuthReqAckPayload, AuthReqAckError>,
+}
+
+impl MessageAble for AuthReqAck {
+    fn to_message(self) -> Message {
+        todo!("auth req ack -> message")
+    }
+
+    fn from_message(msg: Message) -> Result<Self, FromMessageError> {
+        todo!("message -> auth req ack")
+    }
 }
 
 impl AuthReqAck {

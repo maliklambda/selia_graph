@@ -1,25 +1,23 @@
 use std::{
     net::{TcpListener, TcpStream},
+    sync::{Arc, Mutex},
+    thread,
 };
 
 use crate::{
-    connection::Connection,
-    protocol::{
+    connection::Connection, protocol::{
         auth_req::AuthReq,
         auth_req_ack::AuthReqAck,
         startup::StartUp,
         startup_ack::{
             StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
         },
-    },
-    serialization::Serializable,
-    server::{open_connections::OpenConnections, queue::MessageQueue},
-    utils::{
+    }, query::QueryRequest, serialization::Serializable, server::{open_connections::OpenConnections, queue::MessageQueue}, utils::{
         auth::{get_salt_for_username, get_users_password_hash},
         errors::{AuthError, ConnError, ServerAcceptConnError, server_errors::ServerError},
         mocks::{requested_db_exists, username_exists},
         types::{PasswordHash, Salt},
-    },
+    }
 };
 
 pub mod legacy;
@@ -49,21 +47,14 @@ impl Server {
     }
 
     /// Runs the server
-    pub fn run(mut self) -> Result<(), ServerError> {
+    pub fn run(self) -> Result<(), ServerError> {
         for stream in self.listener.incoming() {
+            println!("handling new stream");
             match stream {
                 Ok(stream) => {
                     println!("Accepting connection");
-                    match accept_connection(stream, &self.open_connections) {
-                        Ok(conn) => {
-                            self.open_connections.push(conn);
-                            println!(
-                                "New connection. open connections: {:?}",
-                                self.open_connections
-                            );
-                        }
-                        Err(err) => println!("Could not Initialize connection: {err}"),
-                    }
+                    let open_conns_clone = self.open_connections.clone();
+                    thread::spawn(|| handle_client(stream, open_conns_clone));
                 }
                 Err(err) => {
                     // log error
@@ -75,9 +66,25 @@ impl Server {
     }
 }
 
+fn handle_client(stream: TcpStream, open_connections: Arc<Mutex<Vec<Connection>>>) {
+    match accept_connection(stream, open_connections.clone()) {
+        Ok(mut conn) => {
+            // open_connections.lock().unwrap().push(conn.clone());
+            // println!("New connection. open connections: {:?}", open_connections);
+            loop {
+                println!("Waiting for queries from client.");
+                let bytes = conn.receive().unwrap();
+                let query_req = QueryRequest::from_bytes(&bytes);
+                println!("Received query: {:?}", query_req);
+            }
+        }
+        Err(err) => println!("Could not Initialize connection: {err}"),
+    }
+}
+
 fn accept_connection(
     stream: TcpStream,
-    open_connections: &OpenConnections,
+    open_connections: Arc<Mutex<Vec<Connection>>>,
 ) -> Result<Connection, ServerAcceptConnError> {
     let db_version = 12345;
     // init connection (server side)
@@ -86,7 +93,9 @@ fn accept_connection(
     let mut conn = Connection::new(conn_id, stream, version);
 
     // accept startup
+    println!("Accepting startup");
     let start_up = StartUp::from_bytes(&conn.receive()?);
+    println!("Received startup: {:?}", start_up);
 
     // process startup
     let (username, requested_db_name) = {
@@ -96,7 +105,25 @@ fn accept_connection(
     conn.username = Some(username.to_string());
 
     // check for multiple connections for username
-    if let (true, existing_conn_id) = open_connections.contains_username(username) {
+    let contains_username = {
+        // for existing_conn in
+        let all_conns = open_connections.lock().unwrap();
+        let existing = all_conns
+            .iter()
+            .filter(|item| {
+                if let Some(uname_existing) = item.username.as_ref() {
+                    uname_existing == username
+                } else {
+                    false
+                }
+            })
+            .collect::<Vec<_>>();
+        println!("existing: {:?}", existing);
+        !existing.is_empty()
+    };
+
+    if contains_username {
+        // send error message
         let su_ack_err = {
             let payload_err = StartUpAckErr {
                 reason: StartUpAckErrReason::MultipleConnections,
@@ -116,7 +143,7 @@ fn accept_connection(
         conn.send(&su_ack_err.to_bytes())?;
         return Err(ServerAcceptConnError::DuplicateConnection {
             username: username.to_string(),
-            existing_conn_id,
+            existing_conn_id: conn_id,
         });
     }
     conn.set_username(username.to_string());

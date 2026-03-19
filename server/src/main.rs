@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use crate::{
     client::Client,
     server::Server,
@@ -26,9 +28,12 @@ fn main() {
             let mut client = Client::new(username, requested_db_name, password, protocol_version);
             client.connect().unwrap();
 
-            let query = "GET NODE 12345";
-            println!("Executing query: '{query}'");
-            client.execute_query(query).unwrap();
+            loop {
+                thread::sleep(Duration::from_secs(4));
+                let query = "GET NODE 12345";
+                println!("Executing query: '{query}'");
+                client.execute_query(query).unwrap();
+            }
         }
         "server" => {
             let server = Server::init(HOST, PORT).expect("Failed to initialize server.");

@@ -1,6 +1,5 @@
 use crate::{
-    serialization::Serializable,
-    utils::{constants::HASH_LENGTH_BYTES, types::PasswordHash},
+    protocol::messages::{FromMessageError, Message, MessageAble}, serialization::Serializable, utils::{constants::HASH_LENGTH_BYTES, types::PasswordHash}
 };
 
 #[derive(Debug)]
@@ -11,6 +10,16 @@ pub struct AuthReq {
 impl AuthReq {
     pub fn new(hashed_password: PasswordHash) -> Self {
         Self { hashed_password }
+    }
+}
+
+impl MessageAble for AuthReq {
+    fn to_message(self) -> Message {
+        todo!("auth req -> message")
+    }
+
+    fn from_message(msg: Message) -> Result<Self, FromMessageError> {
+        todo!("message -> auth req")
     }
 }
 

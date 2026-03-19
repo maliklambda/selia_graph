@@ -1,6 +1,5 @@
 use crate::{
-    serialization::{Serializable, string_from_bytes, string_to_bytes},
-    utils::types::Encoding,
+    protocol::messages::MessageAble, serialization::{Serializable, string_from_bytes, string_to_bytes}, utils::types::Encoding
 };
 
 /// StartUp that is sent from client -> server.
@@ -20,6 +19,16 @@ impl StartUp {
 
     pub fn extract_payload(&self) -> &StartUpPayload {
         &self.payload
+    }
+}
+
+impl MessageAble for StartUp {
+    fn to_message(self) -> super::messages::Message {
+        todo!("startup -> message")
+    }
+
+    fn from_message(msg: super::messages::Message) -> Result<Self, super::messages::FromMessageError> {
+        todo!("message -> startup")
     }
 }
 
