@@ -7,9 +7,9 @@ use crate::{
 mod client;
 mod connection;
 mod protocol;
+mod query;
 mod serialization;
 mod server;
-mod query;
 mod utils;
 
 fn main() {
@@ -26,7 +26,9 @@ fn main() {
             let mut client = Client::new(username, requested_db_name, password, protocol_version);
             client.connect().unwrap();
 
-            client.execute_query("GET NODE 12345").unwrap();
+            let query = "GET NODE 12345";
+            println!("Executing query: '{query}'");
+            client.execute_query(query).unwrap();
         }
         "server" => {
             let server = Server::init(HOST, PORT).expect("Failed to initialize server.");

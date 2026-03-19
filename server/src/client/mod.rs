@@ -1,16 +1,20 @@
 use std::net::TcpStream;
 
 use crate::{
-    connection::{ConnStatus, Connection}, protocol::{
+    connection::{ConnStatus, Connection},
+    protocol::{
         auth_req::AuthReq,
         auth_req_ack::{AuthReqAck, AuthReqAckPayload},
         startup::StartUp,
         startup_ack::StartUpAck,
-    }, query::{QueryRequest, QueryResponse, QueryResponsePackage}, serialization::Serializable, utils::{
+    },
+    query::{QueryRequest, QueryResponse, QueryResponsePackage},
+    serialization::Serializable,
+    utils::{
         auth::hash_password,
         constants::server::get_host_name_full,
         errors::{ConnError, ProtocolError, client_errors::ClientError},
-    }
+    },
 };
 
 #[derive(Debug)]
@@ -42,7 +46,7 @@ impl<'a> Client<'a> {
     /// Execute a single query:
     /// Client sends request to server to execute the query.
     /// Server returns result of query execution in batched packages.
-    pub fn execute_query (&mut self, query_str: &str) -> Result<QueryResponse, ClientError> {
+    pub fn execute_query(&mut self, query_str: &str) -> Result<QueryResponse, ClientError> {
         if self.connection.is_none() {
             return Err(ClientError::ConnectionClosedError);
         }
@@ -51,24 +55,28 @@ impl<'a> Client<'a> {
         let mut response_packages: Vec<QueryResponsePackage> = vec![];
 
         // send query request
-        self.connection.as_mut().unwrap().send(&query_req.to_bytes())?;
+        self.connection
+            .as_mut()
+            .unwrap()
+            .send(&query_req.to_bytes())?;
+
+        // receive query response packages
         loop {
+            println!("awaiting new package. ");
             let query_res = {
                 let bytes = self.connection.as_mut().unwrap().receive()?;
                 QueryResponsePackage::from_bytes(&bytes)
             };
+            println!("got new package.");
             match query_res {
                 QueryResponsePackage::Error(err) => return Err(err),
                 QueryResponsePackage::Eof => break,
-                _ => response_packages.push(query_res)
+                _ => response_packages.push(query_res),
             }
-
         }
 
         todo!()
     }
-
-
 
     /// Initialize a connection to the server.
     ///

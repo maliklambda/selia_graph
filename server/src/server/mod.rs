@@ -1,4 +1,6 @@
-use std::{net::{TcpListener, TcpStream}, sync::Mutex};
+use std::{
+    net::{TcpListener, TcpStream},
+};
 
 use crate::{
     connection::Connection,
@@ -21,8 +23,8 @@ use crate::{
 };
 
 pub mod legacy;
-mod queue;
 mod open_connections;
+mod queue;
 
 #[derive(Debug)]
 pub struct Server {
@@ -55,7 +57,10 @@ impl Server {
                     match accept_connection(stream, &self.open_connections) {
                         Ok(conn) => {
                             self.open_connections.push(conn);
-                            println!("New connection. open connections: {:?}", self.open_connections);
+                            println!(
+                                "New connection. open connections: {:?}",
+                                self.open_connections
+                            );
                         }
                         Err(err) => println!("Could not Initialize connection: {err}"),
                     }
