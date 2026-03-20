@@ -1,10 +1,6 @@
 use std::{thread, time::Duration};
 
-use crate::{
-    client::Client,
-    server::Server,
-    utils::constants::server::{HOST, PORT},
-};
+use crate::{client::Client, server::Server};
 
 mod client;
 mod connection;
@@ -42,7 +38,8 @@ fn main() {
             }
         }
         "server" => {
-            let server = Server::init(HOST, PORT).expect("Failed to initialize server.");
+            let args = std::env::args().collect::<Vec<_>>();
+            let server = Server::init(args).expect("Failed to initialize server.");
             println!("Server initialized");
             server.run().expect("Runtime server error");
         }

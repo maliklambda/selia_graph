@@ -37,7 +37,7 @@ impl OpenConnections {
         let msgs = self.conns.lock().unwrap();
         let existing = msgs
             .iter()
-            .filter(|item| &item.username == username)
+            .filter(|item| item.username == username)
             .collect::<Vec<_>>();
 
         if existing.is_empty() {

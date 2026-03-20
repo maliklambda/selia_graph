@@ -1,5 +1,6 @@
 use std::{
     net::{TcpListener, TcpStream},
+    process::CommandArgs,
     thread,
 };
 
@@ -16,6 +17,7 @@ use crate::{
     query::QueryRequest,
     serialization::Serializable,
     server::{
+        cli::{CliArg, ServerCliArgs, prepare_cli_args},
         open_connections::{ConnectionRef, OpenConnections},
         queue::MessageQueue,
     },
@@ -27,6 +29,7 @@ use crate::{
     },
 };
 
+mod cli;
 pub mod legacy;
 mod open_connections;
 mod queue;
@@ -41,8 +44,10 @@ pub struct Server {
 
 impl Server {
     /// Initialize tcp server
-    pub fn init(host: &str, port: u32) -> Result<Server, std::io::Error> {
-        let listener = TcpListener::bind(format!("{host}:{port}"))?;
+    pub fn init(cli_args: Vec<String>) -> Result<Server, std::io::Error> {
+        let cli_args: Vec<CliArg> = prepare_cli_args(cli_args).unwrap();
+        let server_cli_args = ServerCliArgs::from_cli_args(cli_args).unwrap();
+        let listener = TcpListener::bind(server_cli_args.addr)?;
         let version = 1;
         let message_queue = MessageQueue::new();
         Ok(Server {
@@ -62,7 +67,7 @@ impl Server {
                     println!("Accepting connection");
                     let open_conns_clone = self.open_connections.clone();
                     let handle = thread::spawn(|| handle_client(stream, open_conns_clone));
-                    // handle.join().unwrap();
+                    handle.join().unwrap();
                 }
                 Err(err) => {
                     // log error
@@ -81,7 +86,10 @@ fn handle_client(stream: TcpStream, open_connections: ConnectionRef) {
             open_connections.lock().unwrap().push((&conn).into());
             println!("New connection. Open connections: {:?}", open_connections);
             loop {
-                println!("Waiting for queries from client '{}'", conn.username.clone().unwrap());
+                println!(
+                    "Waiting for queries from client '{}'",
+                    conn.username.clone().unwrap()
+                );
                 let bytes = conn.receive().unwrap();
                 let query_req = QueryRequest::from_bytes(&bytes);
                 println!("Received query: {:?}", query_req);
