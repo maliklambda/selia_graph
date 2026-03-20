@@ -1,6 +1,5 @@
 use std::{
     net::{TcpListener, TcpStream},
-    sync::{Arc, Mutex},
     thread,
 };
 
@@ -12,7 +11,7 @@ use crate::{
         startup_ack::{
             StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
         },
-    }, query::QueryRequest, serialization::Serializable, server::{open_connections::OpenConnections, queue::MessageQueue}, utils::{
+    }, query::QueryRequest, serialization::Serializable, server::{open_connections::{ConnectionRef, OpenConnections}, queue::MessageQueue}, utils::{
         auth::{get_salt_for_username, get_users_password_hash},
         errors::{AuthError, ConnError, ServerAcceptConnError, server_errors::ServerError},
         mocks::{requested_db_exists, username_exists},
@@ -54,7 +53,8 @@ impl Server {
                 Ok(stream) => {
                     println!("Accepting connection");
                     let open_conns_clone = self.open_connections.clone();
-                    thread::spawn(|| handle_client(stream, open_conns_clone));
+                    let handle = thread::spawn(|| handle_client(stream, open_conns_clone));
+                    // handle.join().unwrap();
                 }
                 Err(err) => {
                     // log error
@@ -66,11 +66,12 @@ impl Server {
     }
 }
 
-fn handle_client(stream: TcpStream, open_connections: Arc<Mutex<Vec<Connection>>>) {
+fn handle_client(stream: TcpStream, open_connections: ConnectionRef) {
     match accept_connection(stream, open_connections.clone()) {
         Ok(mut conn) => {
-            // open_connections.lock().unwrap().push(conn.clone());
-            // println!("New connection. open connections: {:?}", open_connections);
+            println!("Conn - usrename: {}", conn.username.clone().unwrap());
+            open_connections.lock().unwrap().push((&conn).into());
+            println!("New connection. Open connections: {:?}", open_connections);
             loop {
                 println!("Waiting for queries from client.");
                 let bytes = conn.receive().unwrap();
@@ -84,7 +85,7 @@ fn handle_client(stream: TcpStream, open_connections: Arc<Mutex<Vec<Connection>>
 
 fn accept_connection(
     stream: TcpStream,
-    open_connections: Arc<Mutex<Vec<Connection>>>,
+    open_connections: ConnectionRef,
 ) -> Result<Connection, ServerAcceptConnError> {
     let db_version = 12345;
     // init connection (server side)
@@ -108,14 +109,12 @@ fn accept_connection(
     let contains_username = {
         // for existing_conn in
         let all_conns = open_connections.lock().unwrap();
+        println!("Searching all conns for username '{username}' in {:?}", all_conns);
         let existing = all_conns
             .iter()
             .filter(|item| {
-                if let Some(uname_existing) = item.username.as_ref() {
-                    uname_existing == username
-                } else {
-                    false
-                }
+                println!("Username: '{}'", &item.username);
+                username == &item.username
             })
             .collect::<Vec<_>>();
         println!("existing: {:?}", existing);

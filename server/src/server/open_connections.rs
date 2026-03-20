@@ -2,9 +2,11 @@ use std::sync::{Arc, Mutex};
 
 use crate::{connection::Connection, server::legacy::ConnectionId};
 
+pub type ConnectionRef = Arc<Mutex<Vec<ConnectionInfo>>>;
+
 #[derive(Debug)]
 pub struct OpenConnections {
-    conns: Arc<Mutex<Vec<Connection>>>,
+    conns: ConnectionRef,
 }
 
 impl OpenConnections {
@@ -14,15 +16,15 @@ impl OpenConnections {
         }
     }
 
-    pub fn clone(&self) -> Arc<Mutex<Vec<Connection>>> {
+    pub fn clone(&self) -> ConnectionRef {
         self.conns.clone()
     }
 
-    pub fn push(&mut self, conn: Connection) {
-        self.conns.lock().unwrap().push(conn)
+    pub fn push(&mut self, conn: &Connection) {
+        self.conns.lock().unwrap().push(conn.into())
     }
 
-    pub fn remove_by_id(&mut self, id: ConnectionId) -> Option<Connection> {
+    pub fn remove_by_id(&mut self, id: ConnectionId) -> Option<ConnectionInfo> {
         let mut conns = self.conns.lock().unwrap();
         let (idx, _) = conns
             .iter()
@@ -36,11 +38,7 @@ impl OpenConnections {
         let existing = msgs
             .iter()
             .filter(|item| {
-                if let Some(uname_existing) = item.username.as_ref() {
-                    uname_existing == username
-                } else {
-                    false
-                }
+                &item.username == username
             })
             .collect::<Vec<_>>();
 
@@ -55,5 +53,18 @@ impl OpenConnections {
             );
             (true, existing.first().unwrap().conn_id)
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct ConnectionInfo {
+    pub username: String,
+    pub conn_id: ConnectionId,
+}
+
+
+impl From<&Connection> for ConnectionInfo {
+    fn from(value: &Connection) -> Self {
+        ConnectionInfo { username: value.username.clone().unwrap(), conn_id: value.conn_id }
     }
 }
