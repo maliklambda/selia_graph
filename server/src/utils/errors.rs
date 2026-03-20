@@ -53,10 +53,11 @@ pub mod client_errors {
 }
 
 pub mod server_errors {
-    use crate::utils::errors::ServerShutdownError;
+    use crate::{server::cli::BadArgumentsError, utils::errors::ServerShutdownError};
 
     #[derive(Debug)]
     pub enum ServerError {
+        ServerInit(ServerInitError),
         UnexpectedShutDown(ServerShutdownError),
     }
 
@@ -64,10 +65,41 @@ pub mod server_errors {
     impl std::fmt::Display for ServerError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
+                Self::ServerInit(init_err) => {
+                    write!(f, "Server Error (Initialization failed): {init_err}")
+                }
                 Self::UnexpectedShutDown(shutdown_err) => {
                     write!(f, "Server Error (Unexpected shut down): {shutdown_err}")
                 }
             }
+        }
+    }
+
+    #[derive(Debug)]
+    pub enum ServerInitError {
+        ParseCliArgs(BadArgumentsError),
+        IOError (std::io::Error),
+    }
+
+    impl std::error::Error for ServerInitError {}
+    impl std::fmt::Display for ServerInitError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::ParseCliArgs(err) => write!(f, "Parsing CLI arguments has failed: {err}"),
+                Self::IOError(err) => write!(f, "IO Error in Initialization: {err}"),
+            }
+        }
+    }
+
+    impl From<BadArgumentsError> for ServerInitError {
+        fn from(value: BadArgumentsError) -> Self {
+            ServerInitError::ParseCliArgs(value)
+        }
+    }
+
+    impl From<std::io::Error> for ServerInitError {
+        fn from(value: std::io::Error) -> Self {
+            ServerInitError::IOError(value)
         }
     }
 }

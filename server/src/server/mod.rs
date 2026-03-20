@@ -23,13 +23,13 @@ use crate::{
     },
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
-        errors::{AuthError, ConnError, ServerAcceptConnError, server_errors::ServerError},
+        errors::{AuthError, ConnError, ServerAcceptConnError, server_errors::{ServerError, ServerInitError}},
         mocks::{requested_db_exists, username_exists},
         types::{PasswordHash, Salt},
     },
 };
 
-mod cli;
+pub mod cli;
 pub mod legacy;
 mod open_connections;
 mod queue;
@@ -44,9 +44,8 @@ pub struct Server {
 
 impl Server {
     /// Initialize tcp server
-    pub fn init(cli_args: Vec<String>) -> Result<Server, std::io::Error> {
-        let cli_args: Vec<CliArg> = prepare_cli_args(cli_args).unwrap();
-        let server_cli_args = ServerCliArgs::from_cli_args(cli_args).unwrap();
+    pub fn init(cli_args: Vec<String>) -> Result<Server, ServerInitError> {
+        let server_cli_args = ServerCliArgs::from_cli_args(cli_args)?;
         let listener = TcpListener::bind(server_cli_args.addr)?;
         let version = 1;
         let message_queue = MessageQueue::new();
