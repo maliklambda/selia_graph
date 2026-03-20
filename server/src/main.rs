@@ -17,15 +17,21 @@ mod utils;
 fn main() {
     let arg = std::env::args()
         .nth(1)
-        .expect("Usage: '$ cargo run client' or '$ cargo run server'");
+        .expect("Usage: '$ cargo run client args' or '$ cargo run server'");
     match arg.as_str() {
         "client" => {
-            let username = "Edos";
-            let requested_db_name = "products";
-            let password = "password";
+            let args = std::env::args().collect::<Vec<_>>();
+            let (requested_db_name, username, password) = {
+                assert!(
+                    args.len() >= 4,
+                    "Usage: $ cargo run client requested_DB username password"
+                );
+                (args[2].clone(), args[3].clone(), args[4].clone())
+            };
             let protocol_version = 12345;
 
-            let mut client = Client::new(username, requested_db_name, password, protocol_version);
+            let mut client =
+                Client::new(&username, &requested_db_name, &password, protocol_version);
             client.connect().unwrap();
 
             loop {

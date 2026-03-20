@@ -1,4 +1,7 @@
-use crate::{protocol::messages::MessageAble, serialization::Serializable, utils::errors::client_errors::ClientError};
+use crate::{
+    protocol::messages::MessageAble, serialization::Serializable,
+    utils::errors::client_errors::ClientError,
+};
 
 #[derive(Debug)]
 pub struct QueryRequest {
@@ -21,13 +24,13 @@ impl MessageAble for QueryRequest {
     fn to_message(self) -> crate::protocol::messages::Message {
         todo!("query req -> message")
     }
-    
-    fn from_message(msg: crate::protocol::messages::Message) -> Result<Self, crate::protocol::messages::FromMessageError> {
+
+    fn from_message(
+        msg: crate::protocol::messages::Message,
+    ) -> Result<Self, crate::protocol::messages::FromMessageError> {
         todo!("message -> query req")
     }
 }
-
-
 
 impl Serializable for QueryRequest {
     fn to_bytes(&self) -> Vec<u8> {

@@ -1,4 +1,11 @@
-use crate::{protocol::{Header, messages::{FromMessageError, Message, MessageAble}}, serialization::Serializable, utils::errors::AuthError};
+use crate::{
+    protocol::{
+        Header,
+        messages::{FromMessageError, Message, MessageAble},
+    },
+    serialization::Serializable,
+    utils::errors::AuthError,
+};
 
 #[derive(Debug)]
 pub struct AuthReqAck {

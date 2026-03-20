@@ -4,19 +4,27 @@ use std::{
 };
 
 use crate::{
-    connection::Connection, protocol::{
+    connection::Connection,
+    protocol::{
         auth_req::AuthReq,
         auth_req_ack::AuthReqAck,
         startup::StartUp,
         startup_ack::{
             StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
         },
-    }, query::QueryRequest, serialization::Serializable, server::{open_connections::{ConnectionRef, OpenConnections}, queue::MessageQueue}, utils::{
+    },
+    query::QueryRequest,
+    serialization::Serializable,
+    server::{
+        open_connections::{ConnectionRef, OpenConnections},
+        queue::MessageQueue,
+    },
+    utils::{
         auth::{get_salt_for_username, get_users_password_hash},
         errors::{AuthError, ConnError, ServerAcceptConnError, server_errors::ServerError},
         mocks::{requested_db_exists, username_exists},
         types::{PasswordHash, Salt},
-    }
+    },
 };
 
 pub mod legacy;
@@ -73,7 +81,7 @@ fn handle_client(stream: TcpStream, open_connections: ConnectionRef) {
             open_connections.lock().unwrap().push((&conn).into());
             println!("New connection. Open connections: {:?}", open_connections);
             loop {
-                println!("Waiting for queries from client.");
+                println!("Waiting for queries from client '{}'", conn.username.clone().unwrap());
                 let bytes = conn.receive().unwrap();
                 let query_req = QueryRequest::from_bytes(&bytes);
                 println!("Received query: {:?}", query_req);
@@ -109,7 +117,10 @@ fn accept_connection(
     let contains_username = {
         // for existing_conn in
         let all_conns = open_connections.lock().unwrap();
-        println!("Searching all conns for username '{username}' in {:?}", all_conns);
+        println!(
+            "Searching all conns for username '{username}' in {:?}",
+            all_conns
+        );
         let existing = all_conns
             .iter()
             .filter(|item| {

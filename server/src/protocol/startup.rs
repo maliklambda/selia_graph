@@ -1,5 +1,7 @@
 use crate::{
-    protocol::messages::MessageAble, serialization::{Serializable, string_from_bytes, string_to_bytes}, utils::types::Encoding
+    protocol::messages::MessageAble,
+    serialization::{Serializable, string_from_bytes, string_to_bytes},
+    utils::types::Encoding,
 };
 
 /// StartUp that is sent from client -> server.
@@ -27,7 +29,9 @@ impl MessageAble for StartUp {
         todo!("startup -> message")
     }
 
-    fn from_message(msg: super::messages::Message) -> Result<Self, super::messages::FromMessageError> {
+    fn from_message(
+        msg: super::messages::Message,
+    ) -> Result<Self, super::messages::FromMessageError> {
         todo!("message -> startup")
     }
 }

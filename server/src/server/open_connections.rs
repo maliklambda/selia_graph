@@ -37,9 +37,7 @@ impl OpenConnections {
         let msgs = self.conns.lock().unwrap();
         let existing = msgs
             .iter()
-            .filter(|item| {
-                &item.username == username
-            })
+            .filter(|item| &item.username == username)
             .collect::<Vec<_>>();
 
         if existing.is_empty() {
@@ -62,9 +60,11 @@ pub struct ConnectionInfo {
     pub conn_id: ConnectionId,
 }
 
-
 impl From<&Connection> for ConnectionInfo {
     fn from(value: &Connection) -> Self {
-        ConnectionInfo { username: value.username.clone().unwrap(), conn_id: value.conn_id }
+        ConnectionInfo {
+            username: value.username.clone().unwrap(),
+            conn_id: value.conn_id,
+        }
     }
 }

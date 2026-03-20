@@ -1,5 +1,7 @@
 use crate::{
-    protocol::messages::MessageAble, serialization::{Serializable, string_from_bytes, string_to_bytes}, utils::{errors::U8EnumConversionError, types::Salt}
+    protocol::messages::MessageAble,
+    serialization::{Serializable, string_from_bytes, string_to_bytes},
+    utils::{errors::U8EnumConversionError, types::Salt},
 };
 
 #[derive(Debug, PartialEq)]
@@ -74,7 +76,9 @@ impl MessageAble for StartUpAck {
         todo!("startup ack -> message")
     }
 
-    fn from_message(msg: super::messages::Message) -> Result<Self, super::messages::FromMessageError> {
+    fn from_message(
+        msg: super::messages::Message,
+    ) -> Result<Self, super::messages::FromMessageError> {
         todo!("message -> startup ack")
     }
 }

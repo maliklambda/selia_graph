@@ -1,5 +1,7 @@
 use crate::{
-    protocol::messages::{FromMessageError, Message, MessageAble}, serialization::Serializable, utils::{constants::HASH_LENGTH_BYTES, types::PasswordHash}
+    protocol::messages::{FromMessageError, Message, MessageAble},
+    serialization::Serializable,
+    utils::{constants::HASH_LENGTH_BYTES, types::PasswordHash},
 };
 
 #[derive(Debug)]
