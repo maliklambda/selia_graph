@@ -1,4 +1,5 @@
 use crate::{
+    protocol::messages::MessageAble,
     serialization::{Serializable, string_from_bytes, string_to_bytes},
     utils::types::Encoding,
 };
@@ -7,8 +8,8 @@ use crate::{
 /// Raw startup is then recreated on the server
 #[derive(Debug, PartialEq)]
 pub struct StartUp {
-    headers: StartUpHeaders,
-    payload: StartUpPayload,
+    pub headers: StartUpHeaders,
+    pub payload: StartUpPayload,
 }
 
 impl StartUp {
@@ -20,6 +21,18 @@ impl StartUp {
 
     pub fn extract_payload(&self) -> &StartUpPayload {
         &self.payload
+    }
+}
+
+impl MessageAble for StartUp {
+    fn to_message(self) -> super::messages::Message {
+        todo!("startup -> message")
+    }
+
+    fn from_message(
+        msg: super::messages::Message,
+    ) -> Result<Self, super::messages::FromMessageError> {
+        todo!("message -> startup")
     }
 }
 
@@ -69,9 +82,9 @@ impl Serializable for StartUp {
 ///     version   encoding  payload length
 #[derive(Debug, PartialEq)]
 pub struct StartUpHeaders {
-    version: u16,
-    encoding: Encoding,
-    payload_length: u16,
+    pub version: u16,
+    pub encoding: Encoding,
+    pub payload_length: u16,
 }
 
 impl StartUpHeaders {

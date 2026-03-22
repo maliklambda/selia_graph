@@ -1,15 +1,26 @@
-use crate::protocol::startup_ack::StartUpAckErr;
+use std::fmt::Display;
 
-
+use crate::{
+    protocol::startup_ack::StartUpAckErr, serialization::Serializable, server::legacy::ConnectionId,
+};
 
 pub mod client_errors {
-    use crate::utils::errors::{AuthError, ConnError, ProtocolError};
+    use crate::{
+        protocol::startup_ack::StartUpAckErr,
+        utils::{
+            cli::BadArgumentsError,
+            errors::{AuthError, ConnError, ProtocolError},
+        },
+    };
 
     #[derive(Debug)]
     pub enum ClientError {
-        ConnectionError (ConnError),
-        ProtocolError (ProtocolError),
-        AuthenticationError (AuthError),
+        ConnectionError(ConnError),
+        InitError(BadArgumentsError),
+        StartUpError(StartUpAckErr),
+        ConnectionClosedError,
+        ProtocolError(ProtocolError),
+        AuthenticationError(AuthError),
     }
 
     impl std::error::Error for ClientError {}
@@ -17,8 +28,18 @@ pub mod client_errors {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 Self::ProtocolError(prot_err) => write!(f, "Client Error (Protocol): {prot_err}"),
-                Self::ConnectionError(conn_err) => write!(f, "Client Error (Connection): {conn_err}"),
-                Self::AuthenticationError(auth_err) => write!(f, "Client Error (Autentication): {auth_err}"),
+                Self::ConnectionError(conn_err) => {
+                    write!(f, "Client Error (Connection): {conn_err}")
+                }
+                Self::InitError(bad_args_err) => write!(f, "Client Error (Init): {bad_args_err}"),
+                Self::ConnectionClosedError => write!(
+                    f,
+                    "Client Error (ConnectionClosed): Connection to server has been closed unexpectedly"
+                ),
+                Self::StartUpError(su_err) => write!(f, "Client Error (Startup): {su_err}"),
+                Self::AuthenticationError(auth_err) => {
+                    write!(f, "Client Error (Autentication): {auth_err}")
+                }
             }
         }
     }
@@ -28,14 +49,26 @@ pub mod client_errors {
             ClientError::ConnectionError(value)
         }
     }
+
+    impl From<StartUpAckErr> for ClientError {
+        fn from(value: StartUpAckErr) -> Self {
+            ClientError::StartUpError(value)
+        }
+    }
+
+    impl From<BadArgumentsError> for ClientError {
+        fn from(value: BadArgumentsError) -> Self {
+            ClientError::InitError(value)
+        }
+    }
 }
 
-
 pub mod server_errors {
-    use crate::utils::errors::ServerShutdownError;
+    use crate::utils::{cli::BadArgumentsError, errors::ServerShutdownError};
 
     #[derive(Debug)]
     pub enum ServerError {
+        ServerInit(ServerInitError),
         UnexpectedShutDown(ServerShutdownError),
     }
 
@@ -43,17 +76,48 @@ pub mod server_errors {
     impl std::fmt::Display for ServerError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
-                Self::UnexpectedShutDown(shutdown_err) => write!(f, "Server Error (Unexpected shut down): {shutdown_err}"),
+                Self::ServerInit(init_err) => {
+                    write!(f, "Server Error (Initialization failed): {init_err}")
+                }
+                Self::UnexpectedShutDown(shutdown_err) => {
+                    write!(f, "Server Error (Unexpected shut down): {shutdown_err}")
+                }
             }
         }
     }
 
+    #[derive(Debug)]
+    pub enum ServerInitError {
+        ParseCliArgs(BadArgumentsError),
+        IOError(std::io::Error),
+    }
+
+    impl std::error::Error for ServerInitError {}
+    impl std::fmt::Display for ServerInitError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::ParseCliArgs(err) => write!(f, "Parsing CLI arguments has failed: {err}"),
+                Self::IOError(err) => write!(f, "IO Error in Initialization: {err}"),
+            }
+        }
+    }
+
+    impl From<BadArgumentsError> for ServerInitError {
+        fn from(value: BadArgumentsError) -> Self {
+            ServerInitError::ParseCliArgs(value)
+        }
+    }
+
+    impl From<std::io::Error> for ServerInitError {
+        fn from(value: std::io::Error) -> Self {
+            ServerInitError::IOError(value)
+        }
+    }
 }
 
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AuthError {
-    UnknownUser {name: String},
+    UnknownUser { name: String },
     InvalidPassword,
     InsufficientPermissions,
 }
@@ -70,6 +134,15 @@ impl std::fmt::Display for AuthError {
     }
 }
 
+impl Serializable for AuthError {
+    fn to_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Self {
+        todo!()
+    }
+}
 
 #[derive(Debug)]
 pub enum ConnError {
@@ -125,13 +198,68 @@ impl std::fmt::Display for ServerShutdownError {
 }
 
 #[derive(Debug)]
-pub struct ServerAcceptConnError {}
+pub enum ServerAcceptConnError {
+    BadConnection(ConnError),
+    DuplicateConnection {
+        username: String,
+        existing_conn_id: ConnectionId,
+    },
+    AuthenticationFailure(AuthError),
+    NonExistingDb(String),
+}
 
 impl std::error::Error for ServerAcceptConnError {}
 
 impl std::fmt::Display for ServerAcceptConnError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        let build_msg: fn(&str, Box<dyn Display>) -> String =
+            |reason: &str, err: Box<dyn Display>| {
+                format!("Server refused connection due to {reason}: {err}")
+            };
+
+        match self {
+            Self::BadConnection(conn_err) => {
+                write!(f, "{}", build_msg("failed connection", Box::new(conn_err)))
+            }
+            Self::AuthenticationFailure(auth_err) => {
+                write!(
+                    f,
+                    "{}",
+                    build_msg("failed authentication", Box::new(auth_err))
+                )
+            }
+            Self::NonExistingDb(db_name) => {
+                write!(
+                    f,
+                    "{}",
+                    build_msg(
+                        "non-existing db",
+                        Box::new(format!("database '{}' does not exist", db_name))
+                    )
+                )
+            }
+            Self::DuplicateConnection {
+                username,
+                existing_conn_id,
+            } => {
+                write!(
+                    f,
+                    "{}",
+                    build_msg(
+                        "duplicate connection",
+                        Box::new(format!(
+                            "connection for user '{username}' already exists: {existing_conn_id}"
+                        ))
+                    )
+                )
+            }
+        }
+    }
+}
+
+impl From<ConnError> for ServerAcceptConnError {
+    fn from(value: ConnError) -> Self {
+        Self::BadConnection(value)
     }
 }
 

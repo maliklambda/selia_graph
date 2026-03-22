@@ -1,4 +1,5 @@
 use crate::{
+    protocol::messages::MessageAble,
     serialization::{Serializable, string_from_bytes, string_to_bytes},
     utils::{errors::U8EnumConversionError, types::Salt},
 };
@@ -70,6 +71,18 @@ impl StartUpAck {
     }
 }
 
+impl MessageAble for StartUpAck {
+    fn to_message(self) -> super::messages::Message {
+        todo!("startup ack -> message")
+    }
+
+    fn from_message(
+        msg: super::messages::Message,
+    ) -> Result<Self, super::messages::FromMessageError> {
+        todo!("message -> startup ack")
+    }
+}
+
 impl Serializable for StartUpAck {
     fn to_bytes(&self) -> Vec<u8> {
         let b_headers = self.headers.to_bytes();
@@ -83,6 +96,10 @@ impl Serializable for StartUpAck {
                 err.to_bytes()
             }
         };
+        assert_eq!(
+            self.headers.payload_length,
+            b_payload.len().try_into().unwrap()
+        );
         [b_headers, b_payload].concat()
     }
 
@@ -157,7 +174,11 @@ impl Serializable for StartUpAckHeaders {
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut idx = 0;
         let version_ack = {
-            assert!(bytes.len() > idx);
+            assert!(
+                bytes.len() > idx,
+                "Expected startup ack header to be of max size {} but got {idx}",
+                bytes.len()
+            );
             let version = u16::from_le_bytes(
                 bytes[idx..idx + std::mem::size_of::<u16>()]
                     .try_into()
@@ -237,8 +258,21 @@ impl StartUpAckPayload {
 /// Payload for erroneous startup ack
 #[derive(Debug, PartialEq)]
 pub struct StartUpAckErr {
-    reason: StartUpAckErrReason,
-    err_msg: String,
+    pub reason: StartUpAckErrReason,
+    pub err_msg: String,
+}
+
+impl std::error::Error for StartUpAckErr {}
+
+impl std::fmt::Display for StartUpAckErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.reason {
+            StartUpAckErrReason::Default => write!(f, "Default err: {}", self.err_msg),
+            StartUpAckErrReason::MultipleConnections => {
+                write!(f, "Multiple connections: {}", self.err_msg)
+            }
+        }
+    }
 }
 
 #[test]
@@ -259,14 +293,17 @@ impl Serializable for StartUpAckErr {
         let s = string_to_bytes(&self.err_msg);
         assert!(s.len() < u16::MAX as usize);
         res.extend(s);
+        println!("Turned suack_err {:?} into {:?}", &self, res);
         res
     }
 
     fn from_bytes(bytes: &[u8]) -> Self {
         let mut idx = 0;
+        println!("bytes: {:?}", bytes);
         let reason: StartUpAckErrReason = {
+            let b = bytes[idx].try_into().unwrap();
             idx += 1;
-            bytes[0].try_into().unwrap()
+            b
         };
         let err_msg = {
             let (msg, len) = string_from_bytes(bytes, idx);
@@ -281,6 +318,7 @@ impl Serializable for StartUpAckErr {
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum StartUpAckErrReason {
     Default,
+    MultipleConnections,
 }
 
 impl std::convert::TryFrom<u8> for StartUpAckErrReason {
@@ -288,6 +326,7 @@ impl std::convert::TryFrom<u8> for StartUpAckErrReason {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         Ok(match value {
             0 => StartUpAckErrReason::Default,
+            1 => Self::MultipleConnections,
             _ => return Err(U8EnumConversionError::new(value)),
         })
     }

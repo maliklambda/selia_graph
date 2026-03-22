@@ -3,12 +3,14 @@ use std::{
     net::TcpStream,
 };
 
-use crate::utils::errors::ConnError;
+use crate::{protocol::communicator::Communicator, utils::errors::ConnError};
 
 #[derive(Debug)]
 pub enum ConnStatus {
     Connecting,
+    StartUp,
     Authenticating,
+    Authenticated,
     Idle,
     Busy,
     Closed,
@@ -19,10 +21,28 @@ pub struct Connection {
     pub conn_id: u64,
     pub status: ConnStatus,
     pub version: u16,
+    pub username: Option<String>,
 
     pub stream: TcpStream,
     pub buf_read: Vec<u8>,
     pub buf_write: Vec<u8>,
+}
+
+impl Communicator for Connection {
+    fn send_message<T: crate::protocol::messages::MessageAble>(
+        &mut self,
+        msg: T,
+    ) -> Result<(), crate::protocol::messages::SendMessageError> {
+        todo!("send msg in Connection")
+    }
+
+    fn await_message(
+        &mut self,
+        kind: crate::protocol::messages::MessageKind,
+    ) -> Result<crate::protocol::messages::Message, crate::protocol::messages::AwaitMessageError>
+    {
+        todo!("await msg in Connection")
+    }
 }
 
 impl Connection {
@@ -31,10 +51,15 @@ impl Connection {
             conn_id,
             status: ConnStatus::Connecting,
             version,
+            username: None,
             stream,
             buf_read: vec![],
             buf_write: vec![],
         }
+    }
+
+    pub fn set_username(&mut self, username: String) {
+        self.username = Some(username);
     }
 
     pub fn send(&mut self, msg: &[u8]) -> Result<(), ConnError> {
