@@ -21,15 +21,40 @@ pub mod versioning {
 pub mod cmd_line_args {
     pub const FLAG_INDICATOR: char = '-';
 
-    pub const HOST_STR: &str = "--host";
-    pub const HOST_STR_SHORT: &str = "-h";
-    pub const NUM_EXPECTED_HOST_ARGS: usize = 1;
+    pub mod server {
+        pub const HOST_STR: &str = "--host";
+        pub const HOST_STR_SHORT: &str = "-h";
+        pub const NUM_EXPECTED_HOST_ARGS: usize = 1;
 
-    pub const PORT_STR: &str = "--port";
-    pub const PORT_STR_SHORT: &str = "-p";
-    pub const NUM_EXPECTED_PORT_ARGS: usize = 1;
+        pub const PORT_STR: &str = "--port";
+        pub const PORT_STR_SHORT: &str = "-p";
+        pub const NUM_EXPECTED_PORT_ARGS: usize = 1;
 
-    pub const VERSION_STR: &str = "--version";
-    pub const VERSION_STR_SHORT: &str = "-v";
-    pub const NUM_EXPECTED_VERSION_ARGS: usize = 1;
+        pub const VERSION_STR: &str = "--version";
+        pub const VERSION_STR_SHORT: &str = "-v";
+        pub const NUM_EXPECTED_VERSION_ARGS: usize = 1;
+    }
+    pub mod client {
+        pub const REQUESTED_DB_STR: &str = "--database";
+        pub const REQUESTED_DB_STR_SHORT: &str = "-db";
+        pub const NUM_EXPECTED_REQUESTED_DB_ARGS: usize = 1;
+
+        pub const USERNAME_STR: &str = "--username";
+        pub const USERNAME_STR_SHORT: &str = "-n";
+        pub const NUM_EXPECTED_USERNAME_ARGS: usize = 1;
+
+        pub const PASSWORD_STR: &str = "--password";
+        pub const PASSWORD_STR_SHORT: &str = "-pw";
+        pub const NUM_EXPECTED_PASSWORD_ARGS: usize = 1;
+
+        pub const PROTOCOL_STR: &str = "--protocol";
+        pub const PROTOCOL_STR_SHORT: &str = "-p";
+        pub const NUM_EXPECTED_PROTOCOL_ARGS: usize = 1;
+    }
+}
+
+pub mod client {
+    pub const DEFAULT_REQUESTED_DB: &str = "test";
+    pub const DEFAULT_USERNAME: &str = "Edos";
+    pub const DEFAULT_PASSWORD: &str = "password";
 }

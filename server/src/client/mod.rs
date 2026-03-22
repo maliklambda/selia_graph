@@ -12,26 +12,27 @@ use crate::{
     serialization::Serializable,
     utils::{
         auth::hash_password,
+        cli::client_cli::ClientCliArgs,
         constants::server::get_host_name_full,
         errors::{ConnError, ProtocolError, client_errors::ClientError},
     },
 };
 
 #[derive(Debug)]
-pub struct Client<'a> {
-    username: &'a str,
-    requested_db_name: &'a str,
-    password: &'a str,
+pub struct Client {
+    username: String,
+    requested_db_name: String,
+    password: String,
     protocol_version: u16,
 
     connection: Option<Connection>,
 }
 
-impl<'a> Client<'a> {
+impl Client {
     pub fn new(
-        username: &'a str,
-        requested_db_name: &'a str,
-        password: &'a str,
+        username: String,
+        requested_db_name: String,
+        password: String,
         protocol_version: u16,
     ) -> Self {
         Self {
@@ -41,6 +42,16 @@ impl<'a> Client<'a> {
             protocol_version,
             connection: None,
         }
+    }
+
+    pub fn from_args(cli_args: Vec<String>) -> Result<Self, ClientError> {
+        let client_cli_args = ClientCliArgs::from_cli_args(cli_args)?;
+        Ok(Client::new(
+            client_cli_args.username,
+            client_cli_args.requested_db,
+            client_cli_args.password,
+            client_cli_args.protocol_version,
+        ))
     }
 
     /// Execute a single query:
@@ -150,7 +161,11 @@ impl<'a> Client<'a> {
     /// Startup also sends additional data for authentication.
     /// This saves one round trip to the server.
     fn send_startup(&mut self) -> Result<StartUp, ConnError> {
-        let su = StartUp::new(self.protocol_version, self.username, self.requested_db_name);
+        let su = StartUp::new(
+            self.protocol_version,
+            &self.username,
+            &self.requested_db_name,
+        );
         println!("Sending startup: {:?}", su);
         let msg = su.to_bytes();
         println!("Startup bytes: {:?}", msg);
@@ -181,7 +196,7 @@ impl<'a> Client<'a> {
             payload.salt
         };
         println!("Received salt: {salt}");
-        let hashed_pw = hash_password(self.password, salt);
+        let hashed_pw = hash_password(&self.password, salt);
 
         // send hash to server via auth request
         self.send(&AuthReq::new(hashed_pw).to_bytes())?;

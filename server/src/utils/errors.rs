@@ -7,12 +7,16 @@ use crate::{
 pub mod client_errors {
     use crate::{
         protocol::startup_ack::StartUpAckErr,
-        utils::errors::{AuthError, ConnError, ProtocolError},
+        utils::{
+            cli::BadArgumentsError,
+            errors::{AuthError, ConnError, ProtocolError},
+        },
     };
 
     #[derive(Debug)]
     pub enum ClientError {
         ConnectionError(ConnError),
+        InitError(BadArgumentsError),
         StartUpError(StartUpAckErr),
         ConnectionClosedError,
         ProtocolError(ProtocolError),
@@ -27,6 +31,7 @@ pub mod client_errors {
                 Self::ConnectionError(conn_err) => {
                     write!(f, "Client Error (Connection): {conn_err}")
                 }
+                Self::InitError(bad_args_err) => write!(f, "Client Error (Init): {bad_args_err}"),
                 Self::ConnectionClosedError => write!(
                     f,
                     "Client Error (ConnectionClosed): Connection to server has been closed unexpectedly"
@@ -50,10 +55,16 @@ pub mod client_errors {
             ClientError::StartUpError(value)
         }
     }
+
+    impl From<BadArgumentsError> for ClientError {
+        fn from(value: BadArgumentsError) -> Self {
+            ClientError::InitError(value)
+        }
+    }
 }
 
 pub mod server_errors {
-    use crate::{server::cli::BadArgumentsError, utils::errors::ServerShutdownError};
+    use crate::utils::{cli::BadArgumentsError, errors::ServerShutdownError};
 
     #[derive(Debug)]
     pub enum ServerError {
@@ -78,7 +89,7 @@ pub mod server_errors {
     #[derive(Debug)]
     pub enum ServerInitError {
         ParseCliArgs(BadArgumentsError),
-        IOError (std::io::Error),
+        IOError(std::io::Error),
     }
 
     impl std::error::Error for ServerInitError {}

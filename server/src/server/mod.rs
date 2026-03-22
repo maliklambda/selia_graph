@@ -1,6 +1,5 @@
 use std::{
     net::{TcpListener, TcpStream},
-    process::CommandArgs,
     thread,
 };
 
@@ -17,19 +16,21 @@ use crate::{
     query::QueryRequest,
     serialization::Serializable,
     server::{
-        cli::{CliArg, ServerCliArgs, prepare_cli_args},
         open_connections::{ConnectionRef, OpenConnections},
         queue::MessageQueue,
     },
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
-        errors::{AuthError, ConnError, ServerAcceptConnError, server_errors::{ServerError, ServerInitError}},
+        cli::server_cli::ServerCliArgs,
+        errors::{
+            AuthError, ConnError, ServerAcceptConnError,
+            server_errors::{ServerError, ServerInitError},
+        },
         mocks::{requested_db_exists, username_exists},
         types::{PasswordHash, Salt},
     },
 };
 
-pub mod cli;
 pub mod legacy;
 mod open_connections;
 mod queue;
@@ -46,11 +47,12 @@ impl Server {
     /// Initialize tcp server
     pub fn init(cli_args: Vec<String>) -> Result<Server, ServerInitError> {
         let server_cli_args = ServerCliArgs::from_cli_args(cli_args)?;
+        println!("server args: {:?}", server_cli_args);
+        todo!("Remove this todo");
         let listener = TcpListener::bind(server_cli_args.addr)?;
-        let version = 1;
         let message_queue = MessageQueue::new();
         Ok(Server {
-            version,
+            version: server_cli_args.db_version,
             listener,
             open_connections: OpenConnections::new(),
             message_queue,

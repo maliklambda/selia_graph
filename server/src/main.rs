@@ -16,18 +16,8 @@ fn main() {
         .expect("Usage: '$ cargo run client args' or '$ cargo run server'");
     match arg.as_str() {
         "client" => {
-            let args = std::env::args().collect::<Vec<_>>();
-            let (requested_db_name, username, password) = {
-                assert!(
-                    args.len() >= 4,
-                    "Usage: $ cargo run client requested_DB username password"
-                );
-                (args[2].clone(), args[3].clone(), args[4].clone())
-            };
-            let protocol_version = 12345;
-
-            let mut client =
-                Client::new(&username, &requested_db_name, &password, protocol_version);
+            let args = &std::env::args().collect::<Vec<_>>()[2..];
+            let mut client = Client::from_args(args.to_vec()).unwrap();
             client.connect().unwrap();
 
             loop {
