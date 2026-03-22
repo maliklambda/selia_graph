@@ -254,7 +254,7 @@ pub mod client_cli {
                 }
             }
             // populate unfilled data with default values
-            let requested_db = requested_db.val.unwrap_or(DEFAULT_DB_VERSION.to_string());
+            let requested_db = requested_db.val.unwrap_or(DEFAULT_REQUESTED_DB.to_string());
             let username = username.val.unwrap_or(DEFAULT_USERNAME.to_string());
             let password = password.val.unwrap_or(DEFAULT_PASSWORD.to_string());
             let protocol_version: u16 = u16::from_str(
