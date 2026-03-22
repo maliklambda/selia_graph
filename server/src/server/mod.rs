@@ -66,8 +66,13 @@ impl Server {
                 Ok(stream) => {
                     println!("Accepting connection");
                     let open_conns_clone = self.open_connections.clone();
-                    let handle = thread::spawn(|| handle_client(stream, open_conns_clone));
-                    handle.join().unwrap();
+                    let _handle = thread::spawn(|| handle_client(stream, open_conns_clone));
+                    /*
+                    * The method .join() is never called on the handle.
+                    * Calling .join() would block all other connections to the server until the
+                    * current one finishes. After the connection is closed, the handler is dropped
+                    * and the OS just cleans up the ressources acquired by the thread.
+                    */
                 }
                 Err(err) => {
                     // log error
