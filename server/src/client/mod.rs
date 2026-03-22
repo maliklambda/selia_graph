@@ -1,4 +1,4 @@
-use std::net::TcpStream;
+use std::net::{IpAddr, SocketAddr, TcpStream};
 
 use crate::{
     connection::{ConnStatus, Connection},
@@ -22,6 +22,7 @@ use crate::{
 pub struct Client {
     username: String,
     requested_db_name: String,
+    requested_addr: SocketAddr,
     password: String,
     protocol_version: u16,
 
@@ -32,12 +33,14 @@ impl Client {
     pub fn new(
         username: String,
         requested_db_name: String,
+        requested_addr: SocketAddr,
         password: String,
         protocol_version: u16,
     ) -> Self {
         Self {
             username,
             requested_db_name,
+            requested_addr,
             password,
             protocol_version,
             connection: None,
@@ -46,9 +49,11 @@ impl Client {
 
     pub fn from_args(cli_args: Vec<String>) -> Result<Self, ClientError> {
         let client_cli_args = ClientCliArgs::from_cli_args(cli_args)?;
+        let requested_addr = SocketAddr::new(IpAddr::V4(client_cli_args.requested_host), client_cli_args.requested_port);
         Ok(Client::new(
             client_cli_args.username,
             client_cli_args.requested_db,
+            requested_addr,
             client_cli_args.password,
             client_cli_args.protocol_version,
         ))
@@ -132,7 +137,7 @@ impl Client {
     fn init_connection(&self) -> Result<Connection, ConnError> {
         println!("Connecting...");
         let stream =
-            TcpStream::connect(get_host_name_full()).map_err(|_| ConnError::NoTcpConnection)?;
+            TcpStream::connect(self.requested_addr).map_err(|_| ConnError::NoTcpConnection)?;
         let conn_id = 1234;
         Ok(Connection::new(conn_id, stream, self.protocol_version))
     }

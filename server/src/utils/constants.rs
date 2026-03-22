@@ -48,8 +48,16 @@ pub mod cmd_line_args {
         pub const NUM_EXPECTED_PASSWORD_ARGS: usize = 1;
 
         pub const PROTOCOL_STR: &str = "--protocol";
-        pub const PROTOCOL_STR_SHORT: &str = "-p";
+        pub const PROTOCOL_STR_SHORT: &str = "-pv"; // pv for protocol version
         pub const NUM_EXPECTED_PROTOCOL_ARGS: usize = 1;
+
+        pub const REQUESTED_PORT_STR: &str = "--port";
+        pub const REQUESTED_PORT_STR_SHORT: &str = "-p";
+        pub const NUM_EXPECTED_REQUESTED_PORT_ARGS: usize = 1;
+
+        pub const REQUESTED_HOST_STR: &str = "--host";
+        pub const REQUESTED_HOST_STR_SHORT: &str = "-h";
+        pub const NUM_EXPECTED_REQUESTED_HOST_ARGS: usize = 1;
     }
 }
 

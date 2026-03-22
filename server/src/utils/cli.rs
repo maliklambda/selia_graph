@@ -192,13 +192,15 @@ pub mod client_cli {
         cli::{
             BadArgumentsError, CliArg, StringArgToValue, parse_single_value_arg, prepare_cli_args,
         },
-        constants::{client::*, cmd_line_args::client::*, versioning::*},
+        constants::{client::*, cmd_line_args::client::*, server::{DEFAULT_HOST, DEFAULT_PORT}, versioning::*},
     };
-    use std::str::FromStr;
+    use std::{net::Ipv4Addr, str::FromStr};
 
     #[derive(Debug)]
     pub struct ClientCliArgs {
         pub requested_db: String,
+        pub requested_host: Ipv4Addr,
+        pub requested_port: u16,
         pub username: String,
         pub password: String,
         pub protocol_version: u16,
@@ -208,6 +210,9 @@ pub mod client_cli {
         fn default() -> Self {
             ClientCliArgs {
                 requested_db: String::from(DEFAULT_REQUESTED_DB),
+                requested_host: DEFAULT_HOST,
+                requested_port: DEFAULT_PORT,
+
                 username: String::from(DEFAULT_USERNAME), //mocked, obviously
                 password: String::from(DEFAULT_PASSWORD), //mocked, obviously
                 protocol_version: DEFAULT_PROTOCOL_VERSION,
@@ -227,16 +232,32 @@ pub mod client_cli {
             // declare variables.
             // they are then filled by default values if not defined by cli-args.
             let mut requested_db: StringArgToValue<String> = StringArgToValue::new();
+            let mut requested_host: StringArgToValue<Ipv4Addr> = StringArgToValue::new();
+            let mut requested_port: StringArgToValue<u16> = StringArgToValue::new();
             let mut username: StringArgToValue<String> = StringArgToValue::new();
             let mut password: StringArgToValue<String> = StringArgToValue::new();
             let mut protocol_version: StringArgToValue<String> = StringArgToValue::new();
             for arg in cli_args {
                 match arg.name.as_str() {
+                    // requested data
                     REQUESTED_DB_STR | REQUESTED_DB_STR_SHORT => parse_single_value_arg(
                         arg,
                         &mut requested_db,
                         NUM_EXPECTED_REQUESTED_DB_ARGS,
                     )?,
+
+                    REQUESTED_HOST_STR | REQUESTED_HOST_STR_SHORT => parse_single_value_arg(
+                        arg,
+                        &mut requested_host,
+                        NUM_EXPECTED_REQUESTED_HOST_ARGS,
+                    )?,
+                    REQUESTED_PORT_STR | REQUESTED_PORT_STR_SHORT => parse_single_value_arg(
+                        arg,
+                        &mut requested_port,
+                        NUM_EXPECTED_REQUESTED_PORT_ARGS,
+                    )?,
+
+                    // user credentials
                     PASSWORD_STR | PASSWORD_STR_SHORT => {
                         parse_single_value_arg(arg, &mut password, NUM_EXPECTED_PASSWORD_ARGS)?
                     }
@@ -247,7 +268,7 @@ pub mod client_cli {
                         parse_single_value_arg(
                             arg,
                             &mut protocol_version,
-                            NUM_EXPECTED_PASSWORD_ARGS,
+                            NUM_EXPECTED_PROTOCOL_ARGS,
                         )?;
                     }
                     _ => return Err(BadArgumentsError::UnknownArg(arg)),
@@ -255,6 +276,8 @@ pub mod client_cli {
             }
             // populate unfilled data with default values
             let requested_db = requested_db.val.unwrap_or(DEFAULT_REQUESTED_DB.to_string());
+            let requested_host = requested_host.val.unwrap_or(DEFAULT_HOST);
+            let requested_port = requested_port.val.unwrap_or(DEFAULT_PORT);
             let username = username.val.unwrap_or(DEFAULT_USERNAME.to_string());
             let password = password.val.unwrap_or(DEFAULT_PASSWORD.to_string());
             let protocol_version: u16 = u16::from_str(
@@ -265,6 +288,8 @@ pub mod client_cli {
             .unwrap_or(DEFAULT_PROTOCOL_VERSION);
             Ok(ClientCliArgs {
                 requested_db,
+                requested_host,
+                requested_port,
                 username,
                 password,
                 protocol_version,

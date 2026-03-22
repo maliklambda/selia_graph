@@ -48,7 +48,6 @@ impl Server {
     pub fn init(cli_args: Vec<String>) -> Result<Server, ServerInitError> {
         let server_cli_args = ServerCliArgs::from_cli_args(cli_args)?;
         println!("server args: {:?}", server_cli_args);
-        todo!("Remove this todo");
         let listener = TcpListener::bind(server_cli_args.addr)?;
         let message_queue = MessageQueue::new();
         Ok(Server {
