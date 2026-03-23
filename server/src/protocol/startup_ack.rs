@@ -1,6 +1,6 @@
 use crate::{
     protocol::messages::MessageAble,
-    serialization::{Serializable, string_from_bytes, string_to_bytes},
+    serialization::{FromBytesError, Serializable, string_from_bytes, string_to_bytes},
     utils::{errors::U8EnumConversionError, types::Salt},
 };
 
@@ -24,7 +24,7 @@ fn startup_ack_serialization_success() {
         payload: Ok(payload),
     };
     let bytes = su_ack.to_bytes();
-    let new_su_ack = StartUpAck::from_bytes(&bytes);
+    let new_su_ack = StartUpAck::from_bytes(&bytes).unwrap();
     assert_eq!(su_ack, new_su_ack);
 }
 
@@ -45,7 +45,7 @@ fn startup_ack_serialization_err() {
         payload: Err(payload),
     };
     let bytes = su_ack.to_bytes();
-    let new_su_ack = StartUpAck::from_bytes(&bytes);
+    let new_su_ack = StartUpAck::from_bytes(&bytes).unwrap();
     assert_eq!(su_ack, new_su_ack);
 }
 
@@ -103,20 +103,20 @@ impl Serializable for StartUpAck {
         [b_headers, b_payload].concat()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
-        let headers = StartUpAckHeaders::from_bytes(bytes);
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
+        let headers = StartUpAckHeaders::from_bytes(bytes)?;
         let payload = {
             if headers.is_error {
                 println!("Got headers error");
-                Err(StartUpAckErr::from_bytes(&bytes[headers.byte_length()..]))
+                Err(StartUpAckErr::from_bytes(&bytes[headers.byte_length()..])?)
             } else {
                 println!("Got headers non-error");
                 Ok(StartUpAckPayload::from_bytes(
                     &bytes[headers.byte_length()..],
-                ))
+                )?)
             }
         };
-        StartUpAck { headers, payload }
+        Ok(StartUpAck { headers, payload })
     }
 }
 
@@ -137,7 +137,7 @@ fn startup_ack_headers_serialization() {
         payload_length: u16::MAX,
     };
     let bytes = headers.to_bytes();
-    let new_headers = StartUpAckHeaders::from_bytes(&bytes);
+    let new_headers = StartUpAckHeaders::from_bytes(&bytes).unwrap();
     assert_eq!(headers, new_headers);
 }
 
@@ -171,7 +171,7 @@ impl Serializable for StartUpAckHeaders {
         ret
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         let version_ack = {
             assert!(
@@ -214,12 +214,12 @@ impl Serializable for StartUpAckHeaders {
             idx += std::mem::size_of::<u16>();
             len
         };
-        StartUpAckHeaders {
+        Ok(StartUpAckHeaders {
             version_ack,
             db_version,
             is_error,
             payload_length,
-        }
+        })
     }
 }
 
@@ -233,7 +233,7 @@ pub struct StartUpAckPayload {
 fn startup_ack_payload_serialization_success() {
     let payload = StartUpAckPayload { salt: u16::MAX };
     let bytes = payload.to_bytes();
-    let new_payload = StartUpAckPayload::from_bytes(&bytes);
+    let new_payload = StartUpAckPayload::from_bytes(&bytes).unwrap();
     assert_eq!(payload, new_payload);
 }
 
@@ -242,10 +242,10 @@ impl Serializable for StartUpAckPayload {
         self.salt.to_le_bytes().to_vec()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         assert!(bytes.len() == std::mem::size_of::<u16>());
-        let salt = Salt::from_le_bytes(bytes.try_into().unwrap());
-        StartUpAckPayload { salt }
+        let salt = Salt::from_le_bytes(bytes.try_into().map_err(|_err| FromBytesError::new())?);
+        Ok(StartUpAckPayload { salt })
     }
 }
 
@@ -282,7 +282,7 @@ fn startup_ack_err_serialization() {
         err_msg: "Some Error message.".to_string(),
     };
     let bytes = su_ack_err.to_bytes();
-    let new_su_ack_err = StartUpAckErr::from_bytes(&bytes);
+    let new_su_ack_err = StartUpAckErr::from_bytes(&bytes).unwrap();
     assert_eq!(su_ack_err, new_su_ack_err);
 }
 
@@ -297,11 +297,11 @@ impl Serializable for StartUpAckErr {
         res
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         println!("bytes: {:?}", bytes);
         let reason: StartUpAckErrReason = {
-            let b = bytes[idx].try_into().unwrap();
+            let b = bytes[idx].try_into().map_err(|_err| FromBytesError::new())?;
             idx += 1;
             b
         };
@@ -310,7 +310,7 @@ impl Serializable for StartUpAckErr {
             idx += len;
             msg
         };
-        StartUpAckErr { reason, err_msg }
+        Ok(StartUpAckErr { reason, err_msg })
     }
 }
 

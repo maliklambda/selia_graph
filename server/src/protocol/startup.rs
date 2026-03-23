@@ -1,6 +1,6 @@
 use crate::{
     protocol::messages::MessageAble,
-    serialization::{Serializable, string_from_bytes, string_to_bytes},
+    serialization::{FromBytesError, Serializable, string_from_bytes, string_to_bytes},
     utils::types::Encoding,
 };
 
@@ -52,7 +52,7 @@ fn startup_serialization() {
     };
 
     let bytes = su.to_bytes();
-    let new_su = StartUp::from_bytes(&bytes);
+    let new_su = StartUp::from_bytes(&bytes).unwrap();
     assert_eq!(su, new_su);
 }
 
@@ -66,14 +66,14 @@ impl Serializable for StartUp {
         let b_headers = self.headers.to_bytes();
         [b_headers, b_payload].concat()
     }
-    fn from_bytes(bytes: &[u8]) -> Self {
-        let headers = StartUpHeaders::from_bytes(bytes);
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
+        let headers = StartUpHeaders::from_bytes(bytes)?;
         assert_eq!(
             headers.byte_length() as u16 + headers.payload_length,
             bytes.len() as u16
         );
-        let payload = StartUpPayload::from_bytes(&bytes[headers.byte_length()..]);
-        StartUp { headers, payload }
+        let payload = StartUpPayload::from_bytes(&bytes[headers.byte_length()..])?;
+        Ok(StartUp { headers, payload })
     }
 }
 
@@ -107,7 +107,7 @@ impl Serializable for StartUpHeaders {
         res
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         let version = {
             let v = u16::from_le_bytes(
@@ -133,11 +133,11 @@ impl Serializable for StartUpHeaders {
             pll
         };
 
-        StartUpHeaders {
+        Ok(StartUpHeaders {
             version,
             encoding,
             payload_length,
-        }
+        })
     }
 }
 
@@ -167,13 +167,13 @@ impl Serializable for StartUpPayload {
         b_payload
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let (username, idx) = string_from_bytes(bytes, 0);
         let (requested_db_name, _) = string_from_bytes(bytes, idx);
-        Self {
+        Ok(Self {
             username,
             requested_db_name,
-        }
+        })
     }
 }
 
@@ -184,6 +184,6 @@ fn startup_payload_serialize() {
         requested_db_name: "My_DB".to_string(),
     };
     let ir = payload.to_bytes();
-    let new_payload = StartUpPayload::from_bytes(ir.as_slice());
+    let new_payload = StartUpPayload::from_bytes(ir.as_slice()).unwrap();
     assert_eq!(payload, new_payload)
 }

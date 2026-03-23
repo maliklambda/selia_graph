@@ -1,5 +1,5 @@
 use crate::{
-    protocol::messages::MessageAble, serialization::Serializable,
+    protocol::messages::MessageAble, serialization::{FromBytesError, Serializable},
     utils::errors::client_errors::ClientError,
 };
 
@@ -49,20 +49,20 @@ impl Serializable for QueryRequest {
         [b_length, b_query].concat()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         let length = {
             let l = u16::from_le_bytes(
                 bytes[idx..idx + std::mem::size_of::<u16>()]
                     .try_into()
-                    .expect("Invalid input bytes for version"),
+                    .map_err(|_err| FromBytesError::new())?
             );
             idx += std::mem::size_of::<u16>();
             l
         };
         let s = String::from_utf8_lossy(&bytes[idx..length as usize]);
 
-        QueryRequest::new(&s)
+        Ok(QueryRequest::new(&s))
     }
 }
 
@@ -85,7 +85,7 @@ impl Serializable for QueryResponsePackage {
         todo!("query response to bytes")
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         todo!("query response from bytes")
     }
 }

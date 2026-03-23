@@ -3,7 +3,7 @@ use std::{
     net::TcpStream,
 };
 
-use crate::{protocol::communicator::Communicator, utils::errors::ConnError};
+use crate::{protocol::{communicator::Communicator, messages::{Message, MessageAble}}, serialization::Serializable, utils::errors::ConnError};
 
 #[derive(Debug)]
 pub enum ConnStatus {
@@ -33,7 +33,8 @@ impl Communicator for Connection {
         &mut self,
         msg: T,
     ) -> Result<(), crate::protocol::messages::SendMessageError> {
-        todo!("send msg in Connection")
+        self.send(&msg.to_message().to_bytes())?;
+        Ok(())
     }
 
     fn await_message(
@@ -41,7 +42,9 @@ impl Communicator for Connection {
         kind: crate::protocol::messages::MessageKind,
     ) -> Result<crate::protocol::messages::Message, crate::protocol::messages::AwaitMessageError>
     {
-        todo!("await msg in Connection")
+        let bytes = self.receive().unwrap();
+        let msg = Message::from_bytes(&bytes)?;
+        Ok(msg)
     }
 }
 

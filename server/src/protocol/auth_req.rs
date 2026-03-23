@@ -1,6 +1,6 @@
 use crate::{
     protocol::messages::{FromMessageError, Message, MessageAble},
-    serialization::Serializable,
+    serialization::{FromBytesError, Serializable},
     utils::{constants::HASH_LENGTH_BYTES, types::PasswordHash},
 };
 
@@ -30,7 +30,7 @@ impl Serializable for AuthReq {
         self.hashed_password.to_vec()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         assert_eq!(
             bytes.len(),
             HASH_LENGTH_BYTES,
@@ -38,6 +38,6 @@ impl Serializable for AuthReq {
             expected = HASH_LENGTH_BYTES,
             got = bytes.len()
         );
-        AuthReq::new(bytes.try_into().unwrap())
+        Ok(AuthReq::new(bytes.try_into().map_err(|_err| FromBytesError::new())?))
     }
 }

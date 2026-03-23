@@ -13,7 +13,6 @@ use crate::{
     utils::{
         auth::hash_password,
         cli::client_cli::ClientCliArgs,
-        constants::server::get_host_name_full,
         errors::{ConnError, ProtocolError, client_errors::ClientError},
     },
 };
@@ -81,7 +80,7 @@ impl Client {
             println!("awaiting new package. ");
             let query_res = {
                 let bytes = self.connection.as_mut().unwrap().receive()?;
-                QueryResponsePackage::from_bytes(&bytes)
+                QueryResponsePackage::from_bytes(&bytes)?
             };
             println!("got new package.");
             match query_res {
@@ -184,7 +183,7 @@ impl Client {
         let su_ack = {
             let bytes = self.receive()?;
             println!("Received bytes: {:?}", bytes);
-            StartUpAck::from_bytes(&bytes)
+            StartUpAck::from_bytes(&bytes)?
         };
         Ok(su_ack)
     }
@@ -213,7 +212,7 @@ impl Client {
     fn recv_auth_req_ack(&mut self) -> Result<AuthReqAckPayload, ClientError> {
         let auth_req_ack = {
             let bytes = self.receive()?;
-            AuthReqAck::from_bytes(&bytes)
+            AuthReqAck::from_bytes(&bytes)?
         };
         println!("Received auth request ack: {:?}", auth_req_ack);
         if auth_req_ack.header.is_authenticated {

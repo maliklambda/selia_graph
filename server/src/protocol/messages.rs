@@ -1,4 +1,4 @@
-use crate::{serialization::Serializable, utils::errors::ConnError};
+use crate::{serialization::{FromBytesError, Serializable}, utils::errors::ConnError};
 
 #[derive(Debug)]
 pub struct Message {
@@ -34,7 +34,7 @@ impl Serializable for Message {
         .concat()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         let kind: MessageKind = MessageKind::try_from(bytes[idx]).unwrap();
         todo!("bytes -> message")
@@ -70,14 +70,27 @@ impl From<std::io::Error> for SendMessageError {
     }
 }
 
+impl From<ConnError> for SendMessageError {
+    fn from(value: ConnError) -> Self {
+        Self::Conn(value)
+    }
+}
+
 #[derive(Debug)]
 pub enum AwaitMessageError {
     IO(std::io::Error),
+    MessageConversionError(FromBytesError),
 }
 
 impl From<std::io::Error> for AwaitMessageError {
     fn from(value: std::io::Error) -> Self {
         Self::IO(value)
+    }
+}
+
+impl From<FromBytesError> for AwaitMessageError {
+    fn from(value: FromBytesError) -> Self {
+        Self::MessageConversionError(value)
     }
 }
 

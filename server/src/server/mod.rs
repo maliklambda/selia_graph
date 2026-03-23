@@ -6,12 +6,9 @@ use std::{
 use crate::{
     connection::Connection,
     protocol::{
-        auth_req::AuthReq,
-        auth_req_ack::AuthReqAck,
-        startup::StartUp,
-        startup_ack::{
+        auth_req::AuthReq, auth_req_ack::AuthReqAck, communicator::Communicator, startup::StartUp, startup_ack::{
             StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
-        },
+        }
     },
     query::QueryRequest,
     serialization::Serializable,
@@ -116,7 +113,7 @@ fn accept_connection(
 
     // accept startup
     println!("Accepting startup");
-    let start_up = StartUp::from_bytes(&conn.receive()?);
+    let start_up = StartUp::from_bytes(&conn.receive()?)?;
     println!("Received startup: {:?}", start_up);
 
     // process startup
@@ -183,7 +180,7 @@ fn accept_connection(
     println!("Startup ack sent");
 
     // accept AuthReq
-    let accepted_auth_req = AuthReq::from_bytes(&conn.receive()?);
+    let accepted_auth_req = AuthReq::from_bytes(&conn.receive()?)?;
     println!("Accepted auth request: {:?}", accepted_auth_req);
 
     check_password(username, accepted_auth_req.hashed_password).map_err(|err| {

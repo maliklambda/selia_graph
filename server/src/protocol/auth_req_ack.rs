@@ -3,7 +3,7 @@ use crate::{
         Header,
         messages::{FromMessageError, Message, MessageAble},
     },
-    serialization::Serializable,
+    serialization::{FromBytesError, Serializable},
     utils::errors::AuthError,
 };
 
@@ -78,12 +78,12 @@ impl Serializable for AuthReqAck {
         [self.header.to_bytes(), payload_bytes].concat()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         println!(
             "mem size of AuthReqAckHeader: {}",
             std::mem::size_of::<AuthReqAckHeader>()
         );
-        let header = AuthReqAckHeader::from_bytes(bytes);
+        let header = AuthReqAckHeader::from_bytes(bytes)?;
         assert_eq!(
             header.byte_length() as u16 + header.payload_length,
             bytes.len() as u16,
@@ -97,12 +97,12 @@ impl Serializable for AuthReqAck {
         let payload = if header.is_authenticated {
             Ok(AuthReqAckPayload::from_bytes(
                 &bytes[header.byte_length()..],
-            ))
+            )?)
         } else {
             println!("Error");
-            Err(AuthReqAckError::from_bytes(&bytes[header.byte_length()..]))
+            Err(AuthReqAckError::from_bytes(&bytes[header.byte_length()..])?)
         };
-        AuthReqAck { header, payload }
+        Ok(AuthReqAck { header, payload })
     }
 }
 
@@ -125,7 +125,7 @@ impl Serializable for AuthReqAckHeader {
         v
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         let is_authenticated = {
             assert!(
@@ -147,7 +147,7 @@ impl Serializable for AuthReqAckHeader {
             let pl = u16::from_le_bytes(
                 bytes[idx..idx + std::mem::size_of::<u16>()]
                     .try_into()
-                    .expect("Invalid input bytes for version"),
+                    .map_err(|_err| FromBytesError::new())?
             );
             idx += std::mem::size_of::<u16>();
             pl
@@ -159,10 +159,10 @@ impl Serializable for AuthReqAckHeader {
             "Got more bytes than expected for constructing AuthReqAckHeader. Got {}, expected: {idx}",
             bytes.len()
         );
-        AuthReqAckHeader {
+        Ok(AuthReqAckHeader {
             is_authenticated,
             payload_length,
-        }
+        })
     }
 }
 
@@ -175,7 +175,7 @@ impl Serializable for AuthReqAckPayload {
     fn to_bytes(&self) -> Vec<u8> {
         vec![self.session_timeout_minutes]
     }
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         assert!(
             bytes.len() > idx,
@@ -187,9 +187,9 @@ impl Serializable for AuthReqAckPayload {
             idx += 1;
             (stm, idx)
         };
-        AuthReqAckPayload {
+        Ok(AuthReqAckPayload {
             session_timeout_minutes,
-        }
+        })
     }
 }
 
@@ -207,7 +207,7 @@ impl Serializable for AuthReqAckError {
         v
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         let err_length = {
             assert!(
@@ -218,12 +218,12 @@ impl Serializable for AuthReqAckError {
             let el = u16::from_le_bytes(
                 bytes[idx..idx + std::mem::size_of::<u16>()]
                     .try_into()
-                    .expect("Invalid input bytes for version"),
+                    .map_err(|_err| FromBytesError::new())?
             );
             idx += std::mem::size_of::<u16>();
             el
         };
-        let err = AuthError::from_bytes(&bytes[idx..]);
-        AuthReqAckError { err_length, err }
+        let err = AuthError::from_bytes(&bytes[idx..])?;
+        Ok(AuthReqAckError { err_length, err })
     }
 }

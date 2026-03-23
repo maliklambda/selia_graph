@@ -1,16 +1,15 @@
 use std::fmt::Display;
 
 use crate::{
-    protocol::startup_ack::StartUpAckErr, serialization::Serializable, server::legacy::ConnectionId,
+    protocol::startup_ack::StartUpAckErr, serialization::{FromBytesError, Serializable}, server::legacy::ConnectionId,
 };
 
 pub mod client_errors {
     use crate::{
-        protocol::startup_ack::StartUpAckErr,
-        utils::{
+        protocol::startup_ack::StartUpAckErr, serialization::FromBytesError, utils::{
             cli::BadArgumentsError,
             errors::{AuthError, ConnError, ProtocolError},
-        },
+        }
     };
 
     #[derive(Debug)]
@@ -18,6 +17,7 @@ pub mod client_errors {
         ConnectionError(ConnError),
         InitError(BadArgumentsError),
         StartUpError(StartUpAckErr),
+        MessageConversion(FromBytesError),
         ConnectionClosedError,
         ProtocolError(ProtocolError),
         AuthenticationError(AuthError),
@@ -37,6 +37,7 @@ pub mod client_errors {
                     "Client Error (ConnectionClosed): Connection to server has been closed unexpectedly"
                 ),
                 Self::StartUpError(su_err) => write!(f, "Client Error (Startup): {su_err}"),
+                Self::MessageConversion(conversion_err) => write!(f, "Client Error (Message Conversion): {conversion_err}"),
                 Self::AuthenticationError(auth_err) => {
                     write!(f, "Client Error (Autentication): {auth_err}")
                 }
@@ -47,6 +48,12 @@ pub mod client_errors {
     impl From<ConnError> for ClientError {
         fn from(value: ConnError) -> Self {
             ClientError::ConnectionError(value)
+        }
+    }
+
+    impl From<FromBytesError> for ClientError {
+        fn from(value: FromBytesError) -> Self {
+            ClientError::MessageConversion(value)
         }
     }
 
@@ -139,7 +146,7 @@ impl Serializable for AuthError {
         todo!()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Self {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         todo!()
     }
 }
@@ -149,6 +156,7 @@ pub enum ConnError {
     NoTcpConnection,
     ClientWriteErr,
     ClientReadErr,
+    MessageConversion(FromBytesError),
 }
 
 impl std::error::Error for ConnError {}
@@ -159,7 +167,14 @@ impl std::fmt::Display for ConnError {
             Self::NoTcpConnection => write!(f, "No tcp connection established."),
             Self::ClientWriteErr => write!(f, "Client write failed."),
             Self::ClientReadErr => write!(f, "Client read failed."),
+            Self::MessageConversion(conversion_err) => write!(f, "Client message conversion failed: {conversion_err}"),
         }
+    }
+}
+
+impl From<FromBytesError> for ConnError {
+    fn from(value: FromBytesError) -> Self {
+        Self::MessageConversion(value)
     }
 }
 
@@ -204,6 +219,7 @@ pub enum ServerAcceptConnError {
         username: String,
         existing_conn_id: ConnectionId,
     },
+    MessageConversion (FromBytesError),
     AuthenticationFailure(AuthError),
     NonExistingDb(String),
 }
@@ -220,6 +236,9 @@ impl std::fmt::Display for ServerAcceptConnError {
         match self {
             Self::BadConnection(conn_err) => {
                 write!(f, "{}", build_msg("failed connection", Box::new(conn_err)))
+            }
+            Self::MessageConversion(conversion_err) => {
+                write!(f, "{}", build_msg("failed connection", Box::new(conversion_err)))
             }
             Self::AuthenticationFailure(auth_err) => {
                 write!(
@@ -260,6 +279,12 @@ impl std::fmt::Display for ServerAcceptConnError {
 impl From<ConnError> for ServerAcceptConnError {
     fn from(value: ConnError) -> Self {
         Self::BadConnection(value)
+    }
+}
+
+impl From<FromBytesError> for ServerAcceptConnError {
+    fn from(value: FromBytesError) -> Self {
+        Self::MessageConversion(value)
     }
 }
 

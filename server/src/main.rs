@@ -13,7 +13,7 @@ mod utils;
 fn main() {
     let arg = std::env::args()
         .nth(1)
-        .expect("Usage: '$ cargo run client args' or '$ cargo run server'");
+        .expect("Usage: '$ cargo run client' or '$ cargo run server'");
     match arg.as_str() {
         "client" => {
             let args = &std::env::args().collect::<Vec<_>>()[2..];
