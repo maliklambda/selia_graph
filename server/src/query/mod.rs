@@ -1,12 +1,13 @@
 use crate::{
-    protocol::messages::MessageAble, serialization::{FromBytesError, Serializable},
+    protocol::messages::MessageAble,
+    serialization::{FromBytesError, Serializable},
     utils::errors::client_errors::ClientError,
 };
 
 #[derive(Debug)]
 pub struct QueryRequest {
-    query_length: u16,
-    query: String,
+    pub query_length: u16,
+    pub query: String,
 }
 
 impl QueryRequest {
@@ -50,12 +51,15 @@ impl Serializable for QueryRequest {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
+        if bytes.is_empty() {
+            return Err(FromBytesError::new());
+        }
         let mut idx = 0;
         let length = {
             let l = u16::from_le_bytes(
                 bytes[idx..idx + std::mem::size_of::<u16>()]
                     .try_into()
-                    .map_err(|_err| FromBytesError::new())?
+                    .map_err(|_err| FromBytesError::new())?,
             );
             idx += std::mem::size_of::<u16>();
             l
@@ -69,6 +73,12 @@ impl Serializable for QueryRequest {
 #[derive(Debug)]
 pub struct QueryResponse {
     packages: Vec<QueryResponsePackage>,
+}
+
+impl QueryResponse {
+    pub fn new() -> Self {
+        QueryResponse { packages: vec![] }
+    }
 }
 
 #[derive(Debug)]

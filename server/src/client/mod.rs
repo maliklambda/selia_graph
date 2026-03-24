@@ -5,6 +5,8 @@ use crate::{
     protocol::{
         auth_req::AuthReq,
         auth_req_ack::{AuthReqAck, AuthReqAckPayload},
+        communicator::Communicator,
+        messages::MessageKind,
         startup::StartUp,
         startup_ack::StartUpAck,
     },
@@ -48,7 +50,10 @@ impl Client {
 
     pub fn from_args(cli_args: Vec<String>) -> Result<Self, ClientError> {
         let client_cli_args = ClientCliArgs::from_cli_args(cli_args)?;
-        let requested_addr = SocketAddr::new(IpAddr::V4(client_cli_args.requested_host), client_cli_args.requested_port);
+        let requested_addr = SocketAddr::new(
+            IpAddr::V4(client_cli_args.requested_host),
+            client_cli_args.requested_port,
+        );
         Ok(Client::new(
             client_cli_args.username,
             client_cli_args.requested_db,
@@ -79,6 +84,7 @@ impl Client {
         loop {
             println!("awaiting new package. ");
             let query_res = {
+                // let msg = self.connection.as_mut().unwrap().await_message(MessageKind::ServerQueryResponseHeader).unwrap();
                 let bytes = self.connection.as_mut().unwrap().receive()?;
                 QueryResponsePackage::from_bytes(&bytes)?
             };
@@ -90,6 +96,7 @@ impl Client {
             }
         }
 
+        println!("Finished query acceptance: {:?}", response_packages);
         todo!()
     }
 

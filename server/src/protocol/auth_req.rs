@@ -38,6 +38,8 @@ impl Serializable for AuthReq {
             expected = HASH_LENGTH_BYTES,
             got = bytes.len()
         );
-        Ok(AuthReq::new(bytes.try_into().map_err(|_err| FromBytesError::new())?))
+        Ok(AuthReq::new(
+            bytes.try_into().map_err(|_err| FromBytesError::new())?,
+        ))
     }
 }

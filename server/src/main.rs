@@ -24,7 +24,8 @@ fn main() {
                 thread::sleep(Duration::from_secs(4));
                 let query = "GET NODE 12345";
                 println!("Executing query: '{query}'");
-                client.execute_query(query).unwrap();
+                let query_response = client.execute_query(query).unwrap();
+                println!("Received query response from server: {:?}", query_response);
             }
         }
         "server" => {

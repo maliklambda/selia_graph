@@ -301,7 +301,9 @@ impl Serializable for StartUpAckErr {
         let mut idx = 0;
         println!("bytes: {:?}", bytes);
         let reason: StartUpAckErrReason = {
-            let b = bytes[idx].try_into().map_err(|_err| FromBytesError::new())?;
+            let b = bytes[idx]
+                .try_into()
+                .map_err(|_err| FromBytesError::new())?;
             idx += 1;
             b
         };

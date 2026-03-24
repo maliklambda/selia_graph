@@ -1,4 +1,7 @@
-use crate::{serialization::{FromBytesError, Serializable}, utils::errors::ConnError};
+use crate::{
+    serialization::{FromBytesError, Serializable},
+    utils::errors::ConnError,
+};
 
 #[derive(Debug)]
 pub struct Message {

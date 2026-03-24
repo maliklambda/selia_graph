@@ -1,6 +1,8 @@
 pub trait Serializable {
     fn to_bytes(&self) -> Vec<u8>;
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> where Self: std::marker::Sized;
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError>
+    where
+        Self: std::marker::Sized;
 
     fn byte_length(&self) -> usize {
         self.to_bytes().len()
@@ -8,8 +10,7 @@ pub trait Serializable {
 }
 
 #[derive(Debug)]
-pub struct FromBytesError {
-}
+pub struct FromBytesError {}
 impl FromBytesError {
     pub fn new() -> Self {
         FromBytesError {}
@@ -22,7 +23,6 @@ impl std::fmt::Display for FromBytesError {
         write!(f, "From bytes error: {:?}", self)
     }
 }
-
 
 /// Expects the full byte array with a start index of the string-bytes.
 /// Returns (username, length of username construct).

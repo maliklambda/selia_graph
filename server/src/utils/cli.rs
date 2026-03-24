@@ -192,7 +192,12 @@ pub mod client_cli {
         cli::{
             BadArgumentsError, CliArg, StringArgToValue, parse_single_value_arg, prepare_cli_args,
         },
-        constants::{client::*, cmd_line_args::client::*, server::{DEFAULT_HOST, DEFAULT_PORT}, versioning::*},
+        constants::{
+            client::*,
+            cmd_line_args::client::*,
+            server::{DEFAULT_HOST, DEFAULT_PORT},
+            versioning::*,
+        },
     };
     use std::{net::Ipv4Addr, str::FromStr};
 

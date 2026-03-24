@@ -3,7 +3,14 @@ use std::{
     net::TcpStream,
 };
 
-use crate::{protocol::{communicator::Communicator, messages::{Message, MessageAble}}, serialization::Serializable, utils::errors::ConnError};
+use crate::{
+    protocol::{
+        communicator::Communicator,
+        messages::Message,
+    },
+    serialization::Serializable,
+    utils::errors::ConnError,
+};
 
 #[derive(Debug)]
 pub enum ConnStatus {

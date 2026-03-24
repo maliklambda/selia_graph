@@ -1,20 +1,26 @@
 use std::{
+    collections::VecDeque,
     net::{TcpListener, TcpStream},
+    sync::{Arc, Mutex, atomic::Ordering},
     thread,
 };
 
 use crate::{
     connection::Connection,
     protocol::{
-        auth_req::AuthReq, auth_req_ack::AuthReqAck, communicator::Communicator, startup::StartUp, startup_ack::{
+        auth_req::AuthReq,
+        auth_req_ack::AuthReqAck,
+        communicator::Communicator,
+        startup::StartUp,
+        startup_ack::{
             StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
-        }
+        },
     },
-    query::QueryRequest,
+    query::{QueryRequest, QueryResponse},
     serialization::Serializable,
     server::{
         open_connections::{ConnectionRef, OpenConnections},
-        queue::MessageQueue,
+        queue::{MessageQueue, QueryMessage},
     },
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
@@ -62,14 +68,12 @@ impl Server {
             match stream {
                 Ok(stream) => {
                     println!("Accepting connection");
+                    // give the connection a new id
+                    let client_id = self.open_connections.last_id.fetch_add(1, Ordering::Relaxed);
                     let open_conns_clone = self.open_connections.clone();
-                    let _handle = thread::spawn(|| handle_client(stream, open_conns_clone));
-                    /*
-                    * The method .join() is never called on the handle.
-                    * Calling .join() would block all other connections to the server until the
-                    * current one finishes. After the connection is closed, the handler is dropped
-                    * and the OS just cleans up the ressources acquired by the thread.
-                    */
+                    let mq_ref = self.message_queue.messages.clone();
+                    let _handle =
+                        thread::spawn(move || handle_client(stream, open_conns_clone, mq_ref, client_id));
                 }
                 Err(err) => {
                     // log error
@@ -81,20 +85,40 @@ impl Server {
     }
 }
 
-fn handle_client(stream: TcpStream, open_connections: ConnectionRef) {
-    match accept_connection(stream, open_connections.clone()) {
+fn handle_client(
+    stream: TcpStream,
+    open_connections: ConnectionRef,
+    message_queue: Arc<Mutex<VecDeque<QueryMessage>>>,
+    client_id: u64,
+) {
+    match accept_connection(stream, open_connections.clone(), client_id) {
         Ok(mut conn) => {
-            println!("Conn - usrename: {}", conn.username.clone().unwrap());
+            println!("Conn - username: {} - id: {}", conn.username.clone().unwrap(), conn.conn_id);
             open_connections.lock().unwrap().push((&conn).into());
             println!("New connection. Open connections: {:?}", open_connections);
             loop {
                 println!(
-                    "Waiting for queries from client '{}'",
-                    conn.username.clone().unwrap()
+                    "Waiting for queries from client '{}' ({})",
+                    conn.username.clone().unwrap(),
+                    conn.conn_id,
                 );
-                let bytes = conn.receive().unwrap();
-                let query_req = QueryRequest::from_bytes(&bytes);
-                println!("Received query: {:?}", query_req);
+                match handle_query(&mut conn, &message_queue) {
+                    Ok(query_response) => println!("Received query: {:?}", query_response),
+                    Err(err) => {
+                        println!("Error in handling query: {err}");
+
+                        { // remove all messages for this connection
+                            let mut mq = message_queue.lock().unwrap();
+                            mq.retain(|el| el.conn_id == conn.conn_id);
+                        }
+
+                        { // remove current connection from open_connections
+                            open_connections.lock().unwrap().retain_mut(|connection| connection.conn_id != conn.conn_id);
+                        }
+
+                        break;
+                    }
+                }
             }
         }
         Err(err) => println!("Could not Initialize connection: {err}"),
@@ -104,12 +128,12 @@ fn handle_client(stream: TcpStream, open_connections: ConnectionRef) {
 fn accept_connection(
     stream: TcpStream,
     open_connections: ConnectionRef,
+    client_id: u64,
 ) -> Result<Connection, ServerAcceptConnError> {
     let db_version = 12345;
     // init connection (server side)
-    let conn_id = 1234;
     let version = 1;
-    let mut conn = Connection::new(conn_id, stream, version);
+    let mut conn = Connection::new(client_id, stream, version);
 
     // accept startup
     println!("Accepting startup");
@@ -160,10 +184,11 @@ fn accept_connection(
             "Sending DuplicateConnection error msg: {:?}",
             su_ack_err.to_bytes()
         );
-        conn.send(&su_ack_err.to_bytes())?;
+        conn.send_message(su_ack_err).unwrap();
+        // conn.send(&su_ack_err.to_bytes())?;
         return Err(ServerAcceptConnError::DuplicateConnection {
             username: username.to_string(),
-            existing_conn_id: conn_id,
+            existing_conn_id: client_id,
         });
     }
     conn.set_username(username.to_string());
@@ -197,6 +222,25 @@ fn accept_connection(
     conn.send(&auth_req_ack.to_bytes())?;
 
     Ok(conn)
+}
+
+fn handle_query(
+    conn: &mut Connection,
+    message_queue: &Arc<Mutex<VecDeque<QueryMessage>>>,
+) -> Result<QueryResponse, ConnError> {
+    let query_req = {
+        let bytes = conn.receive()?;
+        QueryRequest::from_bytes(&bytes)?
+    };
+    println!("Handling query: {:?}", query_req);
+    println!("Message queue before: {:?}", message_queue);
+    message_queue
+        .lock()
+        .unwrap()
+        .push_back(QueryMessage::new(query_req.query, conn.conn_id));
+    println!("Message queue after: {:?}", message_queue);
+    let query_response = QueryResponse::new();
+    Ok(query_response)
 }
 
 fn send_startup_ack(conn: &mut Connection, db_version: u16, salt: Salt) -> Result<(), ConnError> {

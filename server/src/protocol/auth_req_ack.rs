@@ -147,7 +147,7 @@ impl Serializable for AuthReqAckHeader {
             let pl = u16::from_le_bytes(
                 bytes[idx..idx + std::mem::size_of::<u16>()]
                     .try_into()
-                    .map_err(|_err| FromBytesError::new())?
+                    .map_err(|_err| FromBytesError::new())?,
             );
             idx += std::mem::size_of::<u16>();
             pl
@@ -218,7 +218,7 @@ impl Serializable for AuthReqAckError {
             let el = u16::from_le_bytes(
                 bytes[idx..idx + std::mem::size_of::<u16>()]
                     .try_into()
-                    .map_err(|_err| FromBytesError::new())?
+                    .map_err(|_err| FromBytesError::new())?,
             );
             idx += std::mem::size_of::<u16>();
             el

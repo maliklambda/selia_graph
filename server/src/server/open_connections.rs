@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::AtomicU64};
 
 use crate::{connection::Connection, server::legacy::ConnectionId};
 
@@ -7,12 +7,14 @@ pub type ConnectionRef = Arc<Mutex<Vec<ConnectionInfo>>>;
 #[derive(Debug)]
 pub struct OpenConnections {
     conns: ConnectionRef,
+    pub last_id: AtomicU64,
 }
 
 impl OpenConnections {
     pub fn new() -> Self {
         OpenConnections {
             conns: Arc::new(Mutex::new(vec![])),
+            last_id: AtomicU64::new(0),
         }
     }
 
