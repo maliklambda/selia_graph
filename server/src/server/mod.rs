@@ -23,11 +23,13 @@ use crate::{
     serialization::Serializable,
     server::{
         open_connections::{ConnectionRef, OpenConnections},
-        queue::MessageQueue, worker::spawn_worker,
+        queue::MessageQueue,
+        worker::spawn_worker,
     },
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
         cli::server_cli::ServerCliArgs,
+        constants::MAX_STORED_MESSAGES,
         errors::{
             AuthError, ConnError, ServerAcceptConnError,
             server_errors::{ServerError, ServerInitError},
@@ -39,8 +41,8 @@ use crate::{
 
 pub mod legacy;
 mod open_connections;
-mod worker;
 pub mod queue;
+mod worker;
 
 #[derive(Debug)]
 pub struct Server {
@@ -51,6 +53,7 @@ pub struct Server {
     listener: TcpListener,
     open_connections: OpenConnections,
     message_queue: MessageQueue,
+    mq_sender: crossbeam_channel::Sender<QueryMessage>,
 }
 
 impl Server {
@@ -64,16 +67,22 @@ impl Server {
         let message_queue = MessageQueue::new();
 
         // init startup db
-        let selected_db = init_db_mocked(&server_cli_args.selected_db, server_cli_args.db_version).unwrap();
+        let selected_db =
+            init_db_mocked(&server_cli_args.selected_db, server_cli_args.db_version).unwrap();
         let db = selected_db.db.clone();
+
+        // init message queue
+        let (msg_sender, msg_receiver) =
+            crossbeam_channel::bounded::<QueryMessage>(MAX_STORED_MESSAGES);
 
         // spawn worker threads
         for worker_id in 0..server_cli_args.num_worker_threads {
+            // clone message queue
+            let mq_recv_clone = msg_receiver.clone();
             let db_handle = DB::new(&db);
-            let worker_mq_ref = message_queue.messages.clone();
-            let _worker_handle = thread::spawn(move || {
-                spawn_worker(worker_id, db_handle, worker_mq_ref.clone())
-            });
+            // let worker_mq_ref = message_queue.messages.clone();
+            let _worker_handle =
+                thread::spawn(move || spawn_worker(worker_id, db_handle, mq_recv_clone));
         }
 
         Ok(Server {
@@ -82,6 +91,7 @@ impl Server {
             open_connections: OpenConnections::new(),
             message_queue,
             selected_db,
+            mq_sender: msg_sender,
         })
     }
 
@@ -99,8 +109,9 @@ impl Server {
                         .fetch_add(1, Ordering::Relaxed);
                     let open_conns_clone = self.open_connections.clone();
                     let mq_ref = self.message_queue.messages.clone();
+                    let mq_sender = self.mq_sender.clone();
                     let _handle = thread::spawn(move || {
-                        handle_client(stream, open_conns_clone, mq_ref, client_id)
+                        handle_client(stream, open_conns_clone, mq_ref, client_id, mq_sender)
                     });
                 }
                 Err(err) => {
@@ -118,6 +129,7 @@ fn handle_client(
     open_connections: ConnectionRef,
     message_queue: Arc<Mutex<VecDeque<QueryMessage>>>,
     client_id: u64,
+    mq_sender: crossbeam_channel::Sender<QueryMessage>,
 ) {
     match accept_connection(stream, open_connections.clone(), client_id) {
         Ok(mut conn) => {
@@ -134,10 +146,11 @@ fn handle_client(
                     conn.username.clone().unwrap(),
                     conn.conn_id,
                 );
-                match handle_query(&mut conn, &message_queue) {
+                match handle_query(&mut conn, &message_queue, mq_sender.clone()) {
                     Ok(query_response) => {
                         println!("Received query: {:?}", query_response);
                         println!("Sending response back to client with id #{}", conn.conn_id);
+                        conn.send(&query_response.packages[0].to_bytes()).unwrap();
                     }
                     Err(err) => {
                         println!("Error in handling query: {err}");
@@ -267,6 +280,7 @@ fn accept_connection(
 fn handle_query(
     conn: &mut Connection,
     message_queue: &Arc<Mutex<VecDeque<QueryMessage>>>,
+    mq_sender: crossbeam_channel::Sender<QueryMessage>,
 ) -> Result<QueryResponse, ConnError> {
     let query_req = {
         let bytes = conn.receive()?;
@@ -274,20 +288,28 @@ fn handle_query(
     };
     let (resp_tx, resp_rx) = mpsc::channel::<QueryResponse>();
     println!("Handling query: {:?}", query_req);
+
+    // add to message queue
     println!("Message queue before: {:?}", message_queue);
     conn.response_acceptor = Some(resp_rx);
     message_queue.lock().unwrap().push_back(QueryMessage::new(
-        query_req.query,
+        query_req.query.clone(),
         conn.conn_id,
-        resp_tx,
+        resp_tx.clone(),
     ));
     println!("Message queue after: {:?}", message_queue);
+
+    // send query request directly to threads' waiting queue
+    mq_sender
+        .send(QueryMessage::new(query_req.query, conn.conn_id, resp_tx))
+        .unwrap();
 
     // block connection thread until it gets the response from the worker thread.
     // After that, the client thread sends the response back to the client (over the network)
     println!("Client thread {} waiting for response", conn.conn_id);
     let query_response = conn.response_acceptor.as_mut().unwrap().recv().unwrap();
-    println!("Client thread got response :)");
+    println!("Client thread got response: {:?}", query_response);
+
     Ok(query_response)
 }
 

@@ -1,9 +1,9 @@
-use std::{str, sync::mpsc};
+use std::sync::mpsc;
 
 use crate::{
     query::QueryResponse,
     serialization::{FromBytesError, Serializable},
-    server::legacy::{ConnectionId, ResponseSenderId},
+    server::legacy::ConnectionId,
     utils::errors::ConnError,
 };
 

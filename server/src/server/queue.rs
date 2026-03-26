@@ -21,7 +21,7 @@ impl MessageQueue {
 
     pub fn push(&self, msg: QueryMessage) {
         self.messages.lock().unwrap().push_back(msg);
-        self.condvar.notify_one(); // wake up worker 
+        self.condvar.notify_one(); // wake up worker
     }
 
     pub fn pop(&mut self) -> QueryMessage {

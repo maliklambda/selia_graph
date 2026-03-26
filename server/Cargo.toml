@@ -7,3 +7,4 @@ edition = "2024"
 rand = "0.10.0"
 sha2 = "0.10.9"
 selia = { path = ".." }
+crossbeam-channel = "0.5.15"

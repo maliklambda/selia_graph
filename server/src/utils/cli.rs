@@ -163,7 +163,7 @@ pub mod server_cli {
             let cli_args: Vec<CliArg> = prepare_cli_args(raw_args).unwrap();
 
             // Declare str -> value arguments.
-            // they are later filled if no arg has been provided. 
+            // they are later filled if no arg has been provided.
             // If an argument is required, the function will error out below.
             let mut host: StringArgToValue<Ipv4Addr> = StringArgToValue::new();
             let mut port: StringArgToValue<u16> = StringArgToValue::new();
@@ -181,9 +181,11 @@ pub mod server_cli {
                     VERSION_STR | VERSION_STR_SHORT => {
                         parse_single_value_arg(arg, &mut db_version, NUM_EXPECTED_VERSION_ARGS)?
                     }
-                    NUM_WORKERS_STR | NUM_WORKERS_STR_SHORT => {
-                        parse_single_value_arg(arg, &mut num_worker_threads, NUM_EXPECTED_NUM_WORKERS_ARGS)?
-                    }
+                    NUM_WORKERS_STR | NUM_WORKERS_STR_SHORT => parse_single_value_arg(
+                        arg,
+                        &mut num_worker_threads,
+                        NUM_EXPECTED_NUM_WORKERS_ARGS,
+                    )?,
                     _ => return Err(BadArgumentsError::UnknownArg(arg)),
                 }
             }

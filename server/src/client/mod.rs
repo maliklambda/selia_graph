@@ -12,7 +12,7 @@ use crate::{
         startup::StartUp,
         startup_ack::StartUpAck,
     },
-    query::{QueryRequest, QueryResponse},
+    query::{QueryRequest, QueryResponse, QueryResponsePackage},
     serialization::Serializable,
     utils::{
         auth::hash_password,
@@ -79,10 +79,11 @@ impl Client {
         // send query request
         self.connection.as_mut().unwrap().send(&qr.to_bytes())?;
 
-        let query_res = self.connection.as_mut().unwrap().receive().unwrap();
-        println!("Client received query res: {:?}", query_res);
-
-        todo!("return query response - client")
+        let query_res = {
+            let bytes = self.connection.as_mut().unwrap().receive().unwrap();
+            QueryResponsePackage::from_bytes(&bytes).unwrap()
+        };
+        Ok(QueryResponse {packages: vec![query_res]})
     }
 
     /// Initialize a connection to the server.

@@ -13,8 +13,15 @@ pub mod server {
     pub const CONN_TIMEOUT_SECS: u64 = 3;
 }
 
+pub mod client {
+    pub const DEFAULT_REQUESTED_DB: &str = "test";
+    pub const DEFAULT_USERNAME: &str = "Edos";
+    pub const DEFAULT_PASSWORD: &str = "password";
+}
+
 pub const TCP_CONNECT_RETIRES: u8 = 5;
 pub const HASH_LENGTH_BYTES: usize = 32; // sha256 (256 bits == 32bytes)
+pub const MAX_STORED_MESSAGES: usize = 200;
 
 pub mod versioning {
     pub const DEFAULT_DB_VERSION_MAJOR: u8 = 0;
@@ -67,10 +74,4 @@ pub mod cmd_line_args {
         pub const REQUESTED_HOST_STR_SHORT: &str = "-h";
         pub const NUM_EXPECTED_REQUESTED_HOST_ARGS: usize = 1;
     }
-}
-
-pub mod client {
-    pub const DEFAULT_REQUESTED_DB: &str = "test";
-    pub const DEFAULT_USERNAME: &str = "Edos";
-    pub const DEFAULT_PASSWORD: &str = "password";
 }
