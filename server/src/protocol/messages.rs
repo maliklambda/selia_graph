@@ -1,5 +1,9 @@
+use std::{str, sync::mpsc};
+
 use crate::{
+    query::QueryResponse,
     serialization::{FromBytesError, Serializable},
+    server::legacy::{ConnectionId, ResponseSenderId},
     utils::errors::ConnError,
 };
 
@@ -110,9 +114,8 @@ pub enum MessageKind {
     ClientAuthReq = 2,
     ServerAuthReqAck = 3,
     ClientQueryReq = 4,
-    ServerQueryResponseHeader = 5,
-    ServerQueryResponseRow = 6,
-    UnknownMessageType(u8) = 7,
+    ServerQueryResponse = 5,
+    UnknownMessageType(u8) = 6,
 }
 
 impl MessageKind {
@@ -123,8 +126,7 @@ impl MessageKind {
             MessageKind::ClientAuthReq => 12,
             MessageKind::ServerAuthReqAck => 32,
             MessageKind::ClientQueryReq => 32,
-            MessageKind::ServerQueryResponseHeader => 32,
-            MessageKind::ServerQueryResponseRow => 32,
+            MessageKind::ServerQueryResponse => 32,
             MessageKind::UnknownMessageType(_) => 0,
         }
     }
@@ -144,8 +146,7 @@ impl TryFrom<u8> for MessageKind {
             2 => Ok(Self::ClientAuthReq),
             3 => Ok(Self::ServerAuthReqAck),
             4 => Ok(Self::ClientQueryReq),
-            5 => Ok(Self::ServerQueryResponseHeader),
-            6 => Ok(Self::ServerQueryResponseRow),
+            5 => Ok(Self::ServerQueryResponse),
             _ => Err(UnknownMessageTypeError { got: value }),
         }
     }
@@ -159,9 +160,31 @@ impl From<MessageKind> for u8 {
             MessageKind::ClientAuthReq => 2,
             MessageKind::ServerAuthReqAck => 3,
             MessageKind::ClientQueryReq => 4,
-            MessageKind::ServerQueryResponseHeader => 5,
-            MessageKind::ServerQueryResponseRow => 6,
-            MessageKind::UnknownMessageType(_) => 7,
+            MessageKind::ServerQueryResponse => 5,
+            MessageKind::UnknownMessageType(_) => 6,
+        }
+    }
+}
+
+pub type ResponseSender = mpsc::Sender<QueryResponse>;
+
+#[derive(Debug)]
+pub struct QueryMessage {
+    pub query: String,
+    pub conn_id: ConnectionId,
+
+    // Response channel is sent with each message.
+    // This bridges the gap between connection and worker thread.
+    // This allows the MessageQueue to be unidirected (connection -> worker).
+    pub response_channel: ResponseSender,
+}
+
+impl QueryMessage {
+    pub fn new(query: String, conn_id: ConnectionId, rx: ResponseSender) -> Self {
+        QueryMessage {
+            query,
+            conn_id,
+            response_channel: rx,
         }
     }
 }

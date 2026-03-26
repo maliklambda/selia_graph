@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, sync::mpsc::RecvError};
 
 use crate::{
     protocol::startup_ack::StartUpAckErr,
@@ -162,6 +162,7 @@ pub enum ConnError {
     NoTcpConnection,
     ClientWriteErr,
     ClientReadErr,
+    FailedQueryResponse(RecvError),
     MessageConversion(FromBytesError),
 }
 
@@ -173,6 +174,9 @@ impl std::fmt::Display for ConnError {
             Self::NoTcpConnection => write!(f, "No tcp connection established."),
             Self::ClientWriteErr => write!(f, "Client write failed."),
             Self::ClientReadErr => write!(f, "Client read failed."),
+            Self::FailedQueryResponse(recv_err) => {
+                write!(f, "Client received erroneous query response: {recv_err}")
+            }
             Self::MessageConversion(conversion_err) => {
                 write!(f, "Client message conversion failed: {conversion_err}")
             }

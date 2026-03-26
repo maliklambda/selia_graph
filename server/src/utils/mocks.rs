@@ -1,3 +1,7 @@
+use std::time::Duration;
+
+use selia::db::db::{DBInitError, GraphDB, Version};
+
 use crate::utils::types::Salt;
 
 pub const MOCKED_USER_CREDENTIALS: [(&str, &str, Salt); 3] = [
@@ -24,4 +28,10 @@ pub fn requested_db_exists(requested_db_name: &str) -> bool {
         .collect::<Vec<_>>()
         .len()
         == 1
+}
+
+pub fn init_db_mocked(db_name: &str, version: Version) -> Result<GraphDB, DBInitError> {
+    std::thread::sleep(Duration::from_secs(2)); // simulate IO operations
+    let db = GraphDB::new(db_name, version)?;
+    Ok(db)
 }

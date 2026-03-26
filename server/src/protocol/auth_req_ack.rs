@@ -69,7 +69,7 @@ impl Serializable for AuthReqAck {
         };
         assert_eq!(
             self.header.payload_length,
-            payload_bytes.len().try_into().unwrap(),
+            payload_bytes.len() as u16,
             "Expected payload length in header to be {}, got: {}",
             payload_bytes.len(),
             self.header.payload_length

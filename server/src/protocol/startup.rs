@@ -60,8 +60,8 @@ impl Serializable for StartUp {
     fn to_bytes(&self) -> Vec<u8> {
         let b_payload = self.payload.to_bytes();
         assert_eq!(
-            self.payload.byte_length(),
-            self.headers.payload_length.into()
+            self.payload.byte_length() as u16,
+            self.headers.payload_length
         );
         let b_headers = self.headers.to_bytes();
         [b_headers, b_payload].concat()

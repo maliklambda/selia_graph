@@ -6,6 +6,9 @@ pub mod server {
     pub fn get_host_name_full() -> String {
         format!("{DEFAULT_HOST}:{DEFAULT_PORT}")
     }
+    pub const DEFAULT_SELECTED_DB: &str = "test";
+    pub const DEFAULT_NUM_WORKERS: u8 = 3;
+
     pub const CLOSE_CONNECTION_MSG: &[u8] = b"Close the connection NOW!";
     pub const CONN_TIMEOUT_SECS: u64 = 3;
 }
@@ -14,7 +17,8 @@ pub const TCP_CONNECT_RETIRES: u8 = 5;
 pub const HASH_LENGTH_BYTES: usize = 32; // sha256 (256 bits == 32bytes)
 
 pub mod versioning {
-    pub const DEFAULT_DB_VERSION: u16 = 1;
+    pub const DEFAULT_DB_VERSION_MAJOR: u8 = 0;
+    pub const DEFAULT_DB_VERSION_MINOR: u8 = 1;
     pub const DEFAULT_PROTOCOL_VERSION: u16 = 1;
 }
 
@@ -33,6 +37,10 @@ pub mod cmd_line_args {
         pub const VERSION_STR: &str = "--version";
         pub const VERSION_STR_SHORT: &str = "-v";
         pub const NUM_EXPECTED_VERSION_ARGS: usize = 1;
+
+        pub const NUM_WORKERS_STR: &str = "--workers";
+        pub const NUM_WORKERS_STR_SHORT: &str = "-w";
+        pub const NUM_EXPECTED_NUM_WORKERS_ARGS: usize = 1;
     }
     pub mod client {
         pub const REQUESTED_DB_STR: &str = "--database";

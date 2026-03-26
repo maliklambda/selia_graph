@@ -1,13 +1,14 @@
-use crate::{db::init_files::init_type_file, objects::{property::PropertyFile, relationship::RelationshipFile, vertex::VertexFile}};
+use crate::{constants::VERSION_SEPARATOR, db::init_files::init_type_file, objects::{property::PropertyFile, relationship::RelationshipFile, vertex::VertexFile}};
 use crate::types::type_management::TypeFile;
 use crate::constants::{paths::*, limits::*};
 use crate::base_types::*;
-use std::{fs::{File, OpenOptions}, sync::{Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard}};
+use std::{fs::{File, OpenOptions}, str::FromStr, string::ParseError, sync::{Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard}};
 use std::path::{Path, PathBuf};
 use std::fs;
 
 
 
+#[derive(Debug)]
 pub struct GraphDB {
     pub db: DBInnerHandle,
     pub name: String,
@@ -16,7 +17,7 @@ pub struct GraphDB {
 
 
 impl GraphDB {
-    pub fn new (db_name: &str, version: Version) -> Result<Self, String> {
+    pub fn new (db_name: &str, version: Version) -> Result<Self, DBInitError> {
         let path = &db_root_path(db_name);
         if path.exists() {
             println!("Initializing GraphDB '{db_name}' from file");
@@ -132,8 +133,21 @@ impl GraphDB {
 }
 
 
+#[derive(Debug)]
+pub enum DBInitError {
+    InitFromFileError (InitFromFileError),
+    InitFromScratchError (InitFromScratchError),
+}
 
 
+#[derive(Debug)]
+pub enum InitFromFileError {}
+
+#[derive(Debug)]
+pub enum InitFromScratchError {}
+
+
+#[derive(Debug)]
 pub struct ConfigHandle {
     pub config_data: Arc<Mutex<Config>>,
     pub f_config: Arwl<File>,
@@ -185,6 +199,7 @@ impl ConfigHandle {
 }
 
 
+#[derive(Debug)]
 pub struct Config {
     version: Version,
 }
@@ -197,6 +212,7 @@ impl Config {
 }
 
 
+#[derive(Debug, Clone, Copy)]
 pub struct Version {
     major: u8,
     minor: u8,
@@ -205,6 +221,23 @@ pub struct Version {
 impl Version {
     pub fn new (major: u8, minor: u8) -> Self {
         Version {major, minor}
+    }
+}
+
+pub enum ParseVersionError {
+    NoSeparator,
+    ParseMinor,
+    ParseMajor,
+}
+
+impl FromStr for Version {
+    type Err = ParseVersionError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        assert!(s.contains(VERSION_SEPARATOR));
+        let sep_idx = s.find(VERSION_SEPARATOR).ok_or(ParseVersionError::NoSeparator)?;
+        let major: u8 = s[..sep_idx].parse().map_err(|_| ParseVersionError::ParseMajor)?;
+        let minor: u8 = s[sep_idx+1..].parse().map_err(|_| ParseVersionError::ParseMinor)?;
+        Ok(Version::new(major, minor))
     }
 }
 

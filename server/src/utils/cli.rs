@@ -1,6 +1,5 @@
 use std::{
     cmp::Ordering::{Equal, Greater, Less},
-    convert::Infallible,
     fmt::Debug,
     str::FromStr,
 };
@@ -122,28 +121,34 @@ impl std::fmt::Display for BadArgumentsError {
 pub mod server_cli {
     use std::net::{Ipv4Addr, SocketAddrV4};
 
+    use selia::db::db::Version;
+
     use crate::utils::{
         cli::{
             BadArgumentsError, CliArg, StringArgToValue, parse_single_value_arg, prepare_cli_args,
         },
         constants::{
             cmd_line_args::server::*,
-            server::{DEFAULT_HOST, DEFAULT_PORT},
-            versioning::DEFAULT_DB_VERSION,
+            server::{DEFAULT_HOST, DEFAULT_NUM_WORKERS, DEFAULT_PORT, DEFAULT_SELECTED_DB},
+            versioning::{DEFAULT_DB_VERSION_MAJOR, DEFAULT_DB_VERSION_MINOR},
         },
     };
 
     #[derive(Debug)]
     pub struct ServerCliArgs {
         pub addr: SocketAddrV4,
-        pub db_version: u16,
+        pub db_version: Version,
+        pub selected_db: String,
+        pub num_worker_threads: u8,
     }
 
     impl ServerCliArgs {
         fn default() -> Self {
             ServerCliArgs {
                 addr: SocketAddrV4::new(DEFAULT_HOST, DEFAULT_PORT),
-                db_version: DEFAULT_DB_VERSION,
+                db_version: Version::new(DEFAULT_DB_VERSION_MAJOR, DEFAULT_DB_VERSION_MINOR),
+                selected_db: DEFAULT_SELECTED_DB.to_string(),
+                num_worker_threads: DEFAULT_NUM_WORKERS,
             }
         }
 
@@ -157,10 +162,14 @@ pub mod server_cli {
             }
             let cli_args: Vec<CliArg> = prepare_cli_args(raw_args).unwrap();
 
-            // Declare them
+            // Declare str -> value arguments.
+            // they are later filled if no arg has been provided. 
+            // If an argument is required, the function will error out below.
             let mut host: StringArgToValue<Ipv4Addr> = StringArgToValue::new();
             let mut port: StringArgToValue<u16> = StringArgToValue::new();
-            let mut db_version: StringArgToValue<u16> = StringArgToValue::new();
+            let mut db_version: StringArgToValue<Version> = StringArgToValue::new();
+            let mut num_worker_threads: StringArgToValue<u8> = StringArgToValue::new();
+
             for arg in cli_args {
                 match arg.name.as_str() {
                     HOST_STR | HOST_STR_SHORT => {
@@ -172,16 +181,30 @@ pub mod server_cli {
                     VERSION_STR | VERSION_STR_SHORT => {
                         parse_single_value_arg(arg, &mut db_version, NUM_EXPECTED_VERSION_ARGS)?
                     }
+                    NUM_WORKERS_STR | NUM_WORKERS_STR_SHORT => {
+                        parse_single_value_arg(arg, &mut num_worker_threads, NUM_EXPECTED_NUM_WORKERS_ARGS)?
+                    }
                     _ => return Err(BadArgumentsError::UnknownArg(arg)),
                 }
             }
+
             let addr = {
                 let host = host.val.unwrap_or(DEFAULT_HOST);
                 let port = port.val.unwrap_or(DEFAULT_PORT);
                 SocketAddrV4::new(host, port)
             };
-            let db_version = db_version.val.unwrap_or(DEFAULT_DB_VERSION);
-            Ok(ServerCliArgs { addr, db_version })
+            let db_version = db_version.val.unwrap_or(Version::new(
+                DEFAULT_DB_VERSION_MAJOR,
+                DEFAULT_DB_VERSION_MINOR,
+            ));
+            let num_worker_threads = num_worker_threads.val.unwrap_or(DEFAULT_NUM_WORKERS);
+
+            Ok(ServerCliArgs {
+                addr,
+                db_version,
+                selected_db: DEFAULT_SELECTED_DB.to_string(),
+                num_worker_threads,
+            })
         }
     }
 }

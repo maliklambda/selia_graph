@@ -96,10 +96,7 @@ impl Serializable for StartUpAck {
                 err.to_bytes()
             }
         };
-        assert_eq!(
-            self.headers.payload_length,
-            b_payload.len().try_into().unwrap()
-        );
+        assert_eq!(self.headers.payload_length, b_payload.len() as u16);
         [b_headers, b_payload].concat()
     }
 

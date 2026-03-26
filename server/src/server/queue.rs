@@ -3,19 +3,7 @@ use std::{
     sync::{Arc, Condvar, Mutex},
 };
 
-use crate::server::legacy::ConnectionId;
-
-#[derive(Debug)]
-pub struct QueryMessage {
-    pub query: String,
-    pub conn_id: ConnectionId,
-}
-
-impl QueryMessage {
-    pub fn new(query: String, conn_id: ConnectionId) -> Self {
-        QueryMessage { query, conn_id }
-    }
-}
+use crate::protocol::messages::QueryMessage;
 
 #[derive(Debug)]
 pub struct MessageQueue {

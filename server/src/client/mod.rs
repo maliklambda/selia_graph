@@ -1,16 +1,18 @@
-use std::net::{IpAddr, SocketAddr, TcpStream};
+use std::{
+    net::{IpAddr, SocketAddr, TcpStream},
+    sync::mpsc,
+};
 
 use crate::{
     connection::{ConnStatus, Connection},
     protocol::{
         auth_req::AuthReq,
         auth_req_ack::{AuthReqAck, AuthReqAckPayload},
-        communicator::Communicator,
-        messages::MessageKind,
+        messages::QueryMessage,
         startup::StartUp,
         startup_ack::StartUpAck,
     },
-    query::{QueryRequest, QueryResponse, QueryResponsePackage},
+    query::{QueryRequest, QueryResponse},
     serialization::Serializable,
     utils::{
         auth::hash_password,
@@ -71,33 +73,16 @@ impl Client {
             return Err(ClientError::ConnectionClosedError);
         }
 
-        let query_req = QueryRequest::new(query_str);
-        let mut response_packages: Vec<QueryResponsePackage> = vec![];
+        // Sender channel: unidirected connection between connection and worker thread
+        let qr = QueryRequest::new(query_str);
 
         // send query request
-        self.connection
-            .as_mut()
-            .unwrap()
-            .send(&query_req.to_bytes())?;
+        self.connection.as_mut().unwrap().send(&qr.to_bytes())?;
 
-        // receive query response packages
-        loop {
-            println!("awaiting new package. ");
-            let query_res = {
-                // let msg = self.connection.as_mut().unwrap().await_message(MessageKind::ServerQueryResponseHeader).unwrap();
-                let bytes = self.connection.as_mut().unwrap().receive()?;
-                QueryResponsePackage::from_bytes(&bytes)?
-            };
-            println!("got new package.");
-            match query_res {
-                QueryResponsePackage::Error(err) => return Err(err),
-                QueryResponsePackage::Eof => break,
-                _ => response_packages.push(query_res),
-            }
-        }
+        let query_res = self.connection.as_mut().unwrap().receive().unwrap();
+        println!("Client received query res: {:?}", query_res);
 
-        println!("Finished query acceptance: {:?}", response_packages);
-        todo!()
+        todo!("return query response - client")
     }
 
     /// Initialize a connection to the server.

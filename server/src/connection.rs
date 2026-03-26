@@ -1,13 +1,12 @@
 use std::{
     io::{Read, Write},
     net::TcpStream,
+    sync::mpsc,
 };
 
 use crate::{
-    protocol::{
-        communicator::Communicator,
-        messages::Message,
-    },
+    protocol::{communicator::Communicator, messages::Message},
+    query::QueryResponse,
     serialization::Serializable,
     utils::errors::ConnError,
 };
@@ -19,9 +18,12 @@ pub enum ConnStatus {
     Authenticating,
     Authenticated,
     Idle,
+    AwaitingQueryResponse,
     Busy,
     Closed,
 }
+
+pub type ResponseAcceptor = mpsc::Receiver<QueryResponse>;
 
 #[derive(Debug)]
 pub struct Connection {
@@ -33,6 +35,7 @@ pub struct Connection {
     pub stream: TcpStream,
     pub buf_read: Vec<u8>,
     pub buf_write: Vec<u8>,
+    pub response_acceptor: Option<ResponseAcceptor>,
 }
 
 impl Communicator for Connection {
@@ -65,6 +68,7 @@ impl Connection {
             stream,
             buf_read: vec![],
             buf_write: vec![],
+            response_acceptor: None,
         }
     }
 

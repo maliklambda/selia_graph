@@ -1,9 +1,11 @@
 use std::{
     collections::VecDeque,
     net::{TcpListener, TcpStream},
-    sync::{Arc, Mutex, atomic::Ordering},
+    sync::{Arc, Mutex, atomic::Ordering, mpsc},
     thread,
 };
+
+use selia::db::db::{DB, GraphDB, Version};
 
 use crate::{
     connection::Connection,
@@ -11,6 +13,7 @@ use crate::{
         auth_req::AuthReq,
         auth_req_ack::AuthReqAck,
         communicator::Communicator,
+        messages::QueryMessage,
         startup::StartUp,
         startup_ack::{
             StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
@@ -20,7 +23,7 @@ use crate::{
     serialization::Serializable,
     server::{
         open_connections::{ConnectionRef, OpenConnections},
-        queue::{MessageQueue, QueryMessage},
+        queue::MessageQueue, worker::spawn_worker,
     },
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
@@ -29,35 +32,56 @@ use crate::{
             AuthError, ConnError, ServerAcceptConnError,
             server_errors::{ServerError, ServerInitError},
         },
-        mocks::{requested_db_exists, username_exists},
+        mocks::{init_db_mocked, requested_db_exists, username_exists},
         types::{PasswordHash, Salt},
     },
 };
 
 pub mod legacy;
 mod open_connections;
-mod queue;
+mod worker;
+pub mod queue;
 
 #[derive(Debug)]
 pub struct Server {
-    version: u16,
+    version: Version,
+    selected_db: GraphDB,
+
+    // concurrency stuff
     listener: TcpListener,
     open_connections: OpenConnections,
     message_queue: MessageQueue,
 }
 
 impl Server {
-    /// Initialize tcp server
+    /// Initialize tcp server.
+    /// Initialize startup DB.
+    /// Spawn worker threads.
     pub fn init(cli_args: Vec<String>) -> Result<Server, ServerInitError> {
         let server_cli_args = ServerCliArgs::from_cli_args(cli_args)?;
         println!("server args: {:?}", server_cli_args);
         let listener = TcpListener::bind(server_cli_args.addr)?;
         let message_queue = MessageQueue::new();
+
+        // init startup db
+        let selected_db = init_db_mocked(&server_cli_args.selected_db, server_cli_args.db_version).unwrap();
+        let db = selected_db.db.clone();
+
+        // spawn worker threads
+        for worker_id in 0..server_cli_args.num_worker_threads {
+            let db_handle = DB::new(&db);
+            let worker_mq_ref = message_queue.messages.clone();
+            let _worker_handle = thread::spawn(move || {
+                spawn_worker(worker_id, db_handle, worker_mq_ref.clone())
+            });
+        }
+
         Ok(Server {
             version: server_cli_args.db_version,
             listener,
             open_connections: OpenConnections::new(),
             message_queue,
+            selected_db,
         })
     }
 
@@ -69,11 +93,15 @@ impl Server {
                 Ok(stream) => {
                     println!("Accepting connection");
                     // give the connection a new id
-                    let client_id = self.open_connections.last_id.fetch_add(1, Ordering::Relaxed);
+                    let client_id = self
+                        .open_connections
+                        .last_id
+                        .fetch_add(1, Ordering::Relaxed);
                     let open_conns_clone = self.open_connections.clone();
                     let mq_ref = self.message_queue.messages.clone();
-                    let _handle =
-                        thread::spawn(move || handle_client(stream, open_conns_clone, mq_ref, client_id));
+                    let _handle = thread::spawn(move || {
+                        handle_client(stream, open_conns_clone, mq_ref, client_id)
+                    });
                 }
                 Err(err) => {
                     // log error
@@ -93,7 +121,11 @@ fn handle_client(
 ) {
     match accept_connection(stream, open_connections.clone(), client_id) {
         Ok(mut conn) => {
-            println!("Conn - username: {} - id: {}", conn.username.clone().unwrap(), conn.conn_id);
+            println!(
+                "Conn - username: {} - id: {}",
+                conn.username.clone().unwrap(),
+                conn.conn_id
+            );
             open_connections.lock().unwrap().push((&conn).into());
             println!("New connection. Open connections: {:?}", open_connections);
             loop {
@@ -103,17 +135,25 @@ fn handle_client(
                     conn.conn_id,
                 );
                 match handle_query(&mut conn, &message_queue) {
-                    Ok(query_response) => println!("Received query: {:?}", query_response),
+                    Ok(query_response) => {
+                        println!("Received query: {:?}", query_response);
+                        println!("Sending response back to client with id #{}", conn.conn_id);
+                    }
                     Err(err) => {
                         println!("Error in handling query: {err}");
 
-                        { // remove all messages for this connection
+                        {
+                            // remove all messages for this connection
                             let mut mq = message_queue.lock().unwrap();
                             mq.retain(|el| el.conn_id == conn.conn_id);
                         }
 
-                        { // remove current connection from open_connections
-                            open_connections.lock().unwrap().retain_mut(|connection| connection.conn_id != conn.conn_id);
+                        {
+                            // remove current connection from open_connections
+                            open_connections
+                                .lock()
+                                .unwrap()
+                                .retain_mut(|connection| connection.conn_id != conn.conn_id);
                         }
 
                         break;
@@ -232,14 +272,22 @@ fn handle_query(
         let bytes = conn.receive()?;
         QueryRequest::from_bytes(&bytes)?
     };
+    let (resp_tx, resp_rx) = mpsc::channel::<QueryResponse>();
     println!("Handling query: {:?}", query_req);
     println!("Message queue before: {:?}", message_queue);
-    message_queue
-        .lock()
-        .unwrap()
-        .push_back(QueryMessage::new(query_req.query, conn.conn_id));
+    conn.response_acceptor = Some(resp_rx);
+    message_queue.lock().unwrap().push_back(QueryMessage::new(
+        query_req.query,
+        conn.conn_id,
+        resp_tx,
+    ));
     println!("Message queue after: {:?}", message_queue);
-    let query_response = QueryResponse::new();
+
+    // block connection thread until it gets the response from the worker thread.
+    // After that, the client thread sends the response back to the client (over the network)
+    println!("Client thread {} waiting for response", conn.conn_id);
+    let query_response = conn.response_acceptor.as_mut().unwrap().recv().unwrap();
+    println!("Client thread got response :)");
     Ok(query_response)
 }
 

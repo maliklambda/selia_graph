@@ -8,6 +8,7 @@ use std::{
 use crate::utils::constants::server::{CLOSE_CONNECTION_MSG, DEFAULT_PORT, get_host_name_full};
 
 pub type ConnectionId = u64;
+pub type ResponseSenderId = u64;
 
 pub fn init_server() {
     println!("Initializing server on port {}", DEFAULT_PORT);

@@ -4,6 +4,9 @@
 *
 */
 
+
+pub const VERSION_SEPARATOR: char = '.';
+
 pub mod lengths {
     use crate::{base_types::{PropertyId, RelationshipId, TypeID}, constants::sys::PAGE_SIZE};
 
