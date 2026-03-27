@@ -1,14 +1,10 @@
-use std::{
-    net::{IpAddr, SocketAddr, TcpStream},
-    sync::mpsc,
-};
+use std::net::{IpAddr, SocketAddr, TcpStream};
 
 use crate::{
     connection::{ConnStatus, Connection},
     protocol::{
         auth_req::AuthReq,
         auth_req_ack::{AuthReqAck, AuthReqAckPayload},
-        messages::QueryMessage,
         startup::StartUp,
         startup_ack::StartUpAck,
     },
@@ -83,7 +79,9 @@ impl Client {
             let bytes = self.connection.as_mut().unwrap().receive().unwrap();
             QueryResponsePackage::from_bytes(&bytes).unwrap()
         };
-        Ok(QueryResponse {packages: vec![query_res]})
+        Ok(QueryResponse {
+            packages: vec![query_res],
+        })
     }
 
     /// Initialize a connection to the server.
