@@ -9,22 +9,21 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Message {
-    pub kind: MessageKind,
+    pub message_header: MessageHeader,
     pub header: Vec<u8>,
-    pub payload_length: u16,
     pub payload: Vec<u8>,
 }
 
 impl Message {
     pub fn new(kind: MessageKind, header: Vec<u8>, payload: Vec<u8>) -> Self {
-        Self {
+        let message_header = MessageHeader::new(
             kind,
+            header.len().try_into().unwrap(),
+            payload.len().try_into().unwrap(),
+        );
+        Self {
+            message_header,
             header,
-            payload_length: payload.len().try_into().expect(&format!(
-                "Payload is too long. Max size in bytes for u16 is {}, got {}",
-                u16::MAX,
-                payload.len()
-            )),
             payload,
         }
     }
@@ -33,9 +32,8 @@ impl Message {
 impl Serializable for Message {
     fn to_bytes(&self) -> Vec<u8> {
         [
-            vec![self.kind.into()],
+            self.message_header.to_bytes(),
             self.header.clone(),
-            self.payload_length.to_le_bytes().to_vec(),
             self.payload.clone(),
         ]
         .concat()
@@ -43,8 +41,87 @@ impl Serializable for Message {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
-        let kind: MessageKind = MessageKind::try_from(bytes[idx]).unwrap();
-        todo!("bytes -> message")
+        let message_header = {
+            let mh = MessageHeader::from_bytes(&bytes[idx..idx+MessageHeader::HEADER_BYTE_LENGTH])?;
+            idx += MessageHeader::HEADER_BYTE_LENGTH;
+            mh
+        };
+        assert_eq!(bytes.len(), idx + message_header.header_length as usize + message_header.payload_length as usize);
+        let (header, payload) = {
+            bytes[idx..].split_at(message_header.header_length as usize)
+        };
+        Ok(Self {
+            message_header,
+            header: header.to_vec(),
+            payload: payload.to_vec(),
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MessageHeader {
+    pub kind: MessageKind,
+    pub header_length: u16,
+    pub payload_length: u16,
+}
+
+impl MessageHeader {
+    pub fn new(kind: MessageKind, header_length: u16, payload_length: u16) -> Self {
+        Self {
+            kind,
+            header_length,
+            payload_length,
+        }
+    }
+
+    pub const HEADER_BYTE_LENGTH: usize = 5;
+}
+
+impl Serializable for MessageHeader {
+    fn to_bytes(&self) -> Vec<u8> {
+        [
+            vec![self.kind.into()],
+            self.header_length.to_le_bytes().to_vec(),
+            self.payload_length.to_le_bytes().to_vec(),
+        ]
+        .concat()
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError>
+    where
+        Self: std::marker::Sized,
+    {
+        let mut idx = 0;
+        let kind = {
+            let kind: MessageKind =
+                MessageKind::try_from(bytes[idx]).map_err(|_| FromBytesError::new())?;
+            idx += 1;
+            kind
+        };
+        let header_length = {
+            let hl = u16::from_le_bytes(
+                bytes[idx..idx + std::mem::size_of::<u16>()]
+                    .try_into()
+                    .unwrap(),
+            );
+            idx += std::mem::size_of::<u16>();
+            hl
+        };
+        let payload_length = {
+            let pl = u16::from_le_bytes(
+                bytes[idx..idx + std::mem::size_of::<u16>()]
+                    .try_into()
+                    .unwrap(),
+            );
+            idx += std::mem::size_of::<u16>();
+            pl
+        };
+        assert_eq!(idx, bytes.len());
+        Ok(Self {
+            kind,
+            header_length,
+            payload_length,
+        })
     }
 }
 
@@ -54,6 +131,8 @@ pub enum FromMessageError {
         expected: MessageKind,
         got: MessageKind,
     },
+    CastHeaderFailure,
+    CastPayloadFailure,
 }
 
 impl std::error::Error for FromMessageError {}
@@ -98,6 +177,17 @@ impl From<std::io::Error> for AwaitMessageError {
 impl From<FromBytesError> for AwaitMessageError {
     fn from(value: FromBytesError) -> Self {
         Self::MessageConversionError(value)
+    }
+}
+
+impl std::fmt::Display for AwaitMessageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IO(err) => write!(f, "awaiting failed due to IO: {err}"),
+            Self::MessageConversionError(err) => {
+                write!(f, "awaiting failed due to message conversion: {err}")
+            }
+        }
     }
 }
 

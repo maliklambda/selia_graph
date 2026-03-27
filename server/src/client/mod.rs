@@ -5,6 +5,8 @@ use crate::{
     protocol::{
         auth_req::AuthReq,
         auth_req_ack::{AuthReqAck, AuthReqAckPayload},
+        communicator::Communicator,
+        messages::{Message, MessageAble, MessageKind},
         startup::StartUp,
         startup_ack::StartUpAck,
     },
@@ -105,7 +107,7 @@ impl Client {
     pub fn establish_connect(&mut self) -> Result<(), ClientError> {
         self.connection = Some(self.init_connection()?);
 
-        let su_ack = self.startup()?;
+        let su_ack = self.init_startup()?;
         println!("Startup completed");
         self.connection.as_mut().unwrap().status = ConnStatus::Authenticating;
 
@@ -133,7 +135,7 @@ impl Client {
     }
 
     /// Initialize startup.
-    fn startup(&mut self) -> Result<StartUpAck, ClientError> {
+    fn init_startup(&mut self) -> Result<StartUpAck, ClientError> {
         let _ = self.send_startup();
         println!("Startup has been sent");
 
@@ -162,9 +164,11 @@ impl Client {
             &self.requested_db_name,
         );
         println!("Sending startup: {:?}", su);
-        let msg = su.to_bytes();
-        println!("Startup bytes: {:?}", msg);
-        self.send(&msg)?;
+        self.connection
+            .as_mut()
+            .unwrap()
+            .send_message(su.clone())
+            .unwrap();
         Ok(su)
     }
 

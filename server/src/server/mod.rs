@@ -12,7 +12,7 @@ use crate::{
         auth_req::AuthReq,
         auth_req_ack::AuthReqAck,
         communicator::Communicator,
-        messages::QueryMessage,
+        messages::{MessageAble, MessageKind, QueryMessage},
         startup::StartUp,
         startup_ack::{
             StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
@@ -176,7 +176,12 @@ fn accept_connection(
 
     // accept startup
     println!("Accepting startup");
-    let start_up = StartUp::from_bytes(&conn.receive()?)?;
+    let msg = conn
+        .await_message(MessageKind::ClientStartup)
+        .map_err(|_| ServerAcceptConnError::ReceivedInvalidStartup)?;
+    let start_up =
+        StartUp::from_message(msg).map_err(|_| ServerAcceptConnError::ReceivedInvalidStartup)?;
+    // let start_up = StartUp::from_bytes(&conn.receive()?)?;
     println!("Received startup: {:?}", start_up);
 
     // process startup
@@ -213,7 +218,7 @@ fn accept_connection(
                 err_msg: format!("Duplicate connection for {username}"),
             };
             let headers = StartUpAckHeaders::new_error(
-                start_up.headers.version,
+                start_up.header.version,
                 db_version,
                 payload_err.byte_length().try_into().unwrap(),
             );

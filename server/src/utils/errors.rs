@@ -1,7 +1,10 @@
 use std::{fmt::Display, sync::mpsc::RecvError};
 
 use crate::{
-    protocol::startup_ack::StartUpAckErr,
+    protocol::{
+        messages::{FromMessageError, SendMessageError},
+        startup_ack::StartUpAckErr,
+    },
     serialization::{FromBytesError, Serializable},
     server::legacy::ConnectionId,
 };
@@ -163,7 +166,7 @@ pub enum ConnError {
     ClientWriteErr,
     ClientReadErr,
     FailedQueryResponse(RecvError),
-    MessageConversion(FromBytesError),
+    MessageConversion(Box<dyn std::error::Error>),
 }
 
 impl std::error::Error for ConnError {}
@@ -184,9 +187,15 @@ impl std::fmt::Display for ConnError {
     }
 }
 
+impl From<FromMessageError> for ConnError {
+    fn from(value: FromMessageError) -> Self {
+        Self::MessageConversion(Box::new(value))
+    }
+}
+
 impl From<FromBytesError> for ConnError {
     fn from(value: FromBytesError) -> Self {
-        Self::MessageConversion(value)
+        Self::MessageConversion(Box::new(value))
     }
 }
 
@@ -233,6 +242,7 @@ pub enum ServerAcceptConnError {
     },
     MessageConversion(FromBytesError),
     AuthenticationFailure(AuthError),
+    ReceivedInvalidStartup,
     NonExistingDb(String),
 }
 
@@ -255,6 +265,9 @@ impl std::fmt::Display for ServerAcceptConnError {
                     "{}",
                     build_msg("failed connection", Box::new(conversion_err))
                 )
+            }
+            Self::ReceivedInvalidStartup => {
+                write!(f, "{}", "Received invalid startup")
             }
             Self::AuthenticationFailure(auth_err) => {
                 write!(
