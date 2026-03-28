@@ -1,5 +1,5 @@
 use crate::{
-    protocol::messages::{FromMessageError, Message, MessageAble},
+    protocol::messages::{FromMessageError, Message, MessageAble, MessageKind},
     serialization::{FromBytesError, Serializable},
     utils::{constants::HASH_LENGTH_BYTES, types::PasswordHash},
 };
@@ -17,13 +17,17 @@ impl AuthReq {
 
 impl MessageAble for AuthReq {
     fn to_message(self) -> Message {
-        todo!("auth req -> message")
+        // send empty vec as header
+        Message::new(MessageKind::ClientAuthReq, vec![], self.hashed_password.to_vec())
     }
 
     fn from_message(msg: Message) -> Result<Self, FromMessageError> {
-        todo!("message -> auth req")
+        assert_eq!(msg.payload.len(), HASH_LENGTH_BYTES);
+        let hash = msg.payload;
+        Ok(Self::new(hash.try_into().unwrap()))
     }
 }
+
 
 impl Serializable for AuthReq {
     fn to_bytes(&self) -> Vec<u8> {
@@ -31,6 +35,7 @@ impl Serializable for AuthReq {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
+        println!("Bytes: {:?}", bytes);
         assert_eq!(
             bytes.len(),
             HASH_LENGTH_BYTES,

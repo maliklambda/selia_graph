@@ -249,7 +249,10 @@ fn accept_connection(
     println!("Startup ack sent");
 
     // accept AuthReq
-    let accepted_auth_req = AuthReq::from_bytes(&conn.receive()?)?;
+    let accepted_auth_req = {
+        let msg = conn.await_message(MessageKind::ClientAuthReq).map_err(|_| ServerAcceptConnError::InvalidAuthRequest)?;
+        AuthReq::from_message(msg).map_err(|_| ServerAcceptConnError::InvalidAuthRequest)?
+    };
     println!("Accepted auth request: {:?}", accepted_auth_req);
 
     check_password(username, accepted_auth_req.hashed_password).map_err(|err| {
@@ -308,7 +311,8 @@ fn send_startup_ack(conn: &mut Connection, db_version: u16, salt: Salt) -> Resul
     };
     println!("Sending StartUpAck: {:?}", su_ack);
     println!("StartUpAck as bytes: {:?}", su_ack.to_bytes());
-    conn.send(&su_ack.to_bytes())?;
+    conn.send_message(su_ack).unwrap();
+    // conn.send(&su_ack.to_bytes())?;
     Ok(())
 }
 

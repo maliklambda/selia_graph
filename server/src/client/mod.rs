@@ -176,9 +176,8 @@ impl Client {
     pub fn recv_startup_ack(&mut self) -> Result<StartUpAck, ConnError> {
         println!("receiving startup ack");
         let su_ack = {
-            let bytes = self.receive()?;
-            println!("Received bytes: {:?}", bytes);
-            StartUpAck::from_bytes(&bytes)?
+            let msg = self.connection.as_mut().unwrap().await_message(MessageKind::ServerStartupAck).unwrap();
+            StartUpAck::from_message(msg).unwrap()
         };
         Ok(su_ack)
     }
@@ -198,7 +197,8 @@ impl Client {
         let hashed_pw = hash_password(&self.password, salt);
 
         // send hash to server via auth request
-        self.send(&AuthReq::new(hashed_pw).to_bytes())?;
+        let auth_req = AuthReq::new(hashed_pw);
+        self.connection.as_mut().unwrap().send_message(auth_req).unwrap();
 
         // receive server response (auth_req_ack)
         self.recv_auth_req_ack()

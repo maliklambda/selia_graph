@@ -43,7 +43,9 @@ impl Communicator for Connection {
         &mut self,
         msg: T,
     ) -> Result<(), crate::protocol::messages::SendMessageError> {
-        self.send(&msg.to_message().to_bytes())?;
+        println!("Sending '{:?}'", msg);
+        let msg_bytes = &msg.to_message().to_bytes();
+        self.send(msg_bytes)?;
         Ok(())
     }
 
@@ -54,6 +56,7 @@ impl Communicator for Connection {
     {
         let bytes = self.receive().unwrap();
         let msg = Message::from_bytes(&bytes)?;
+        println!("Received '{:?}'", msg);
         Ok(msg)
     }
 }

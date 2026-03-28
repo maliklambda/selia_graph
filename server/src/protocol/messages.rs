@@ -42,14 +42,16 @@ impl Serializable for Message {
     fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
         let mut idx = 0;
         let message_header = {
-            let mh = MessageHeader::from_bytes(&bytes[idx..idx+MessageHeader::HEADER_BYTE_LENGTH])?;
+            let mh =
+                MessageHeader::from_bytes(&bytes[idx..idx + MessageHeader::HEADER_BYTE_LENGTH])?;
             idx += MessageHeader::HEADER_BYTE_LENGTH;
             mh
         };
-        assert_eq!(bytes.len(), idx + message_header.header_length as usize + message_header.payload_length as usize);
-        let (header, payload) = {
-            bytes[idx..].split_at(message_header.header_length as usize)
-        };
+        assert_eq!(
+            bytes.len(),
+            idx + message_header.header_length as usize + message_header.payload_length as usize
+        );
+        let (header, payload) = { bytes[idx..].split_at(message_header.header_length as usize) };
         Ok(Self {
             message_header,
             header: header.to_vec(),
@@ -191,7 +193,7 @@ impl std::fmt::Display for AwaitMessageError {
     }
 }
 
-pub trait MessageAble: Sized {
+pub trait MessageAble: Sized + std::fmt::Debug {
     fn to_message(self) -> Message;
     fn from_message(msg: Message) -> Result<Self, FromMessageError>;
 }

@@ -243,6 +243,7 @@ pub enum ServerAcceptConnError {
     MessageConversion(FromBytesError),
     AuthenticationFailure(AuthError),
     ReceivedInvalidStartup,
+    InvalidAuthRequest,
     NonExistingDb(String),
 }
 
@@ -268,6 +269,9 @@ impl std::fmt::Display for ServerAcceptConnError {
             }
             Self::ReceivedInvalidStartup => {
                 write!(f, "{}", "Received invalid startup")
+            }
+            Self::InvalidAuthRequest => {
+                write!(f, "{}", "Received invalid auth request")
             }
             Self::AuthenticationFailure(auth_err) => {
                 write!(
