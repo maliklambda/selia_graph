@@ -1,28 +1,64 @@
 use std::{
     io::{Read, Write},
     net::TcpStream,
+    sync::mpsc,
 };
 
-use crate::utils::errors::ConnError;
+use crate::{
+    protocol::{communicator::Communicator, messages::Message},
+    query::QueryResponse,
+    serialization::Serializable,
+    utils::errors::ConnError,
+};
 
 #[derive(Debug)]
 pub enum ConnStatus {
     Connecting,
+    StartUp,
     Authenticating,
+    Authenticated,
     Idle,
+    AwaitingQueryResponse,
     Busy,
     Closed,
 }
+
+pub type ResponseAcceptor = mpsc::Receiver<QueryResponse>;
 
 #[derive(Debug)]
 pub struct Connection {
     pub conn_id: u64,
     pub status: ConnStatus,
     pub version: u16,
+    pub username: Option<String>,
 
     pub stream: TcpStream,
     pub buf_read: Vec<u8>,
     pub buf_write: Vec<u8>,
+    pub response_acceptor: Option<ResponseAcceptor>,
+}
+
+impl Communicator for Connection {
+    fn send_message<T: crate::protocol::messages::MessageAble>(
+        &mut self,
+        msg: T,
+    ) -> Result<(), crate::protocol::messages::SendMessageError> {
+        println!("Sending '{:?}'", msg);
+        let msg_bytes = &msg.to_message().to_bytes();
+        self.send(msg_bytes)?;
+        Ok(())
+    }
+
+    fn await_message(
+        &mut self,
+        kind: crate::protocol::messages::MessageKind,
+    ) -> Result<crate::protocol::messages::Message, crate::protocol::messages::AwaitMessageError>
+    {
+        let bytes = self.receive().unwrap();
+        let msg = Message::from_bytes(&bytes)?;
+        println!("Received '{:?}'", msg);
+        Ok(msg)
+    }
 }
 
 impl Connection {
@@ -31,10 +67,16 @@ impl Connection {
             conn_id,
             status: ConnStatus::Connecting,
             version,
+            username: None,
             stream,
             buf_read: vec![],
             buf_write: vec![],
+            response_acceptor: None,
         }
+    }
+
+    pub fn set_username(&mut self, username: String) {
+        self.username = Some(username);
     }
 
     pub fn send(&mut self, msg: &[u8]) -> Result<(), ConnError> {

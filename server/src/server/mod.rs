@@ -1,52 +1,113 @@
-use std::net::{TcpListener, TcpStream};
+use std::{
+    net::{TcpListener, TcpStream},
+    sync::{atomic::Ordering, mpsc},
+    thread,
+};
+
+use selia::db::db::{DB, GraphDB, Version};
 
 use crate::{
     connection::Connection,
     protocol::{
-        startup::{StartUp, StartUpHeaders, StartUpPayload},
-        startup_ack::{StartUpAck, StartUpAckHeaders, StartUpAckPayload},
+        auth_req::AuthReq,
+        auth_req_ack::AuthReqAck,
+        communicator::Communicator,
+        messages::{MessageAble, MessageKind, QueryMessage},
+        startup::StartUp,
+        startup_ack::{
+            StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
+        },
     },
+    query::{QueryRequest, QueryResponse},
     serialization::Serializable,
-    server::queue::MessageQueue,
+    server::{
+        open_connections::{ConnectionRef, OpenConnections},
+        worker::spawn_worker,
+    },
     utils::{
-        auth::generate_salt, errors::{ConnError, ServerAcceptConnError, ServerShutdownError, server_errors::ServerError}, types::Salt
+        auth::{get_salt_for_username, get_users_password_hash},
+        cli::server_cli::ServerCliArgs,
+        constants::MAX_STORED_MESSAGES,
+        errors::{
+            AuthError, ConnError, ServerAcceptConnError,
+            server_errors::{ServerError, ServerInitError},
+        },
+        mocks::{init_db_mocked, requested_db_exists, username_exists},
+        types::{PasswordHash, Salt},
     },
 };
 
 pub mod legacy;
-mod queue;
+mod open_connections;
+pub mod queue;
+mod worker;
 
+#[derive(Debug)]
 pub struct Server {
-    version: u16,
+    version: Version,
+    selected_db: GraphDB, // TODO: enable multiple GraphDB handles
+
+    // concurrency stuff
     listener: TcpListener,
-    message_queue: MessageQueue,
+    open_connections: OpenConnections,
+    mq_sender: crossbeam_channel::Sender<QueryMessage>,
 }
 
 impl Server {
-    /// Initialize tcp server
-    pub fn init(host: &str, port: u32) -> Result<Server, std::io::Error> {
-        let listener = TcpListener::bind(format!("{host}:{port}"))?;
-        let version = 1;
-        let message_queue = MessageQueue::new();
+    /// Initialize tcp server.
+    /// Initialize startup DB.
+    /// Spawn worker threads.
+    pub fn init(cli_args: Vec<String>) -> Result<Server, ServerInitError> {
+        let server_cli_args = ServerCliArgs::from_cli_args(cli_args)?;
+        println!("server args: {:?}", server_cli_args);
+        let listener = TcpListener::bind(server_cli_args.addr)?;
+
+        // TODO: init runtime -> runtime inits everything else
+
+        // init startup db
+        let selected_db =
+            init_db_mocked(&server_cli_args.selected_db, server_cli_args.db_version).unwrap();
+        let db = selected_db.db.clone();
+
+        // init message queue
+        let (msg_sender, msg_receiver) =
+            crossbeam_channel::bounded::<QueryMessage>(MAX_STORED_MESSAGES);
+
+        // spawn worker threads
+        for worker_id in 0..server_cli_args.num_worker_threads {
+            // clone message queue
+            let mq_recv_clone = msg_receiver.clone();
+            let db_handle = DB::new(&db);
+            let _worker_handle =
+                thread::spawn(move || spawn_worker(worker_id, db_handle, mq_recv_clone));
+        }
+
         Ok(Server {
-            version,
+            version: server_cli_args.db_version,
             listener,
-            message_queue,
+            open_connections: OpenConnections::new(),
+            selected_db,
+            mq_sender: msg_sender,
         })
     }
 
     /// Runs the server
-    pub fn run(mut self) -> Result<(), ServerError> {
+    pub fn run(self) -> Result<(), ServerError> {
         for stream in self.listener.incoming() {
+            println!("handling new stream");
             match stream {
                 Ok(stream) => {
                     println!("Accepting connection");
-                    if let Ok(conn) = accept_connection(stream) {
-                        self.message_queue.push(conn);
-                    } else {
-                        // log error
-                        println!("Could not initialize connection");
-                    }
+                    // give the connection a new id
+                    let client_id = self
+                        .open_connections
+                        .last_id
+                        .fetch_add(1, Ordering::Relaxed);
+                    let open_conns_clone = self.open_connections.clone();
+                    let mq_sender = self.mq_sender.clone();
+                    let _handle = thread::spawn(move || {
+                        handle_client(stream, open_conns_clone, client_id, mq_sender)
+                    });
                 }
                 Err(err) => {
                     // log error
@@ -54,68 +115,230 @@ impl Server {
                 }
             }
         }
-        todo!()
+        todo!("handle server shutdown")
     }
 }
 
-fn accept_connection(stream: TcpStream) -> Result<Connection, ServerAcceptConnError> {
+fn handle_client(
+    stream: TcpStream,
+    open_connections: ConnectionRef,
+    client_id: u64,
+    mq_sender: crossbeam_channel::Sender<QueryMessage>,
+) {
+    match accept_connection(stream, open_connections.clone(), client_id) {
+        Ok(mut conn) => {
+            println!(
+                "Conn - username: {} - id: {}",
+                conn.username.clone().unwrap(),
+                conn.conn_id
+            );
+            open_connections.lock().unwrap().push((&conn).into());
+            println!("New connection. Open connections: {:?}", open_connections);
+            loop {
+                println!(
+                    "Waiting for queries from client '{}' ({})",
+                    conn.username.clone().unwrap(),
+                    conn.conn_id,
+                );
+                match handle_query(&mut conn, mq_sender.clone()) {
+                    Ok(query_response) => {
+                        println!("Received query response: {:?}", query_response);
+                        println!("Sending response back to client with id #{}", conn.conn_id);
+                        conn.send(&query_response.packages[0].to_bytes()).unwrap();
+                    }
+                    Err(err) => {
+                        println!("Error in handling query: {err}");
+                        {
+                            // remove current connection from open_connections
+                            open_connections
+                                .lock()
+                                .unwrap()
+                                .retain_mut(|connection| connection.conn_id != conn.conn_id);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        Err(err) => println!("Could not Initialize connection: {err}"),
+    }
+}
+
+fn accept_connection(
+    stream: TcpStream,
+    open_connections: ConnectionRef,
+    client_id: u64,
+) -> Result<Connection, ServerAcceptConnError> {
     let db_version = 12345;
     // init connection (server side)
-    let conn_id = 1234;
     let version = 1;
-    let mut conn = Connection::new(conn_id, stream, version);
+    let mut conn = Connection::new(client_id, stream, version);
 
     // accept startup
-    println!("Receiving startup...");
-    let start_up = recv_startup(&mut conn).unwrap();
+    println!("Accepting startup");
+    let msg = conn
+        .await_message(MessageKind::ClientStartup)
+        .map_err(|_| ServerAcceptConnError::ReceivedInvalidStartup)?;
+    let start_up =
+        StartUp::from_message(msg).map_err(|_| ServerAcceptConnError::ReceivedInvalidStartup)?;
+    // let start_up = StartUp::from_bytes(&conn.receive()?)?;
     println!("Received startup: {:?}", start_up);
-    println!("Startup as bytes: {:?}", start_up.to_bytes());
 
     // process startup
     let (username, requested_db_name) = {
         let payload = start_up.extract_payload();
         (&payload.username, &payload.requested_db_name)
     };
+    conn.username = Some(username.to_string());
+
+    // check for multiple connections for username
+    let contains_username = {
+        // for existing_conn in
+        let all_conns = open_connections.lock().unwrap();
+        println!(
+            "Searching all conns for username '{username}' in {:?}",
+            all_conns
+        );
+        let existing = all_conns
+            .iter()
+            .filter(|item| {
+                println!("Username: '{}'", &item.username);
+                username == &item.username
+            })
+            .collect::<Vec<_>>();
+        println!("existing: {:?}", existing);
+        !existing.is_empty()
+    };
+
+    if contains_username {
+        // send error message
+        let su_ack_err = {
+            let payload_err = StartUpAckErr {
+                reason: StartUpAckErrReason::MultipleConnections,
+                err_msg: format!("Duplicate connection for {username}"),
+            };
+            let headers = StartUpAckHeaders::new_error(
+                start_up.header.version,
+                db_version,
+                payload_err.byte_length().try_into().unwrap(),
+            );
+            StartUpAck::new_error(headers, payload_err)
+        };
+        println!(
+            "Sending DuplicateConnection error msg: {:?}",
+            su_ack_err.to_bytes()
+        );
+        conn.send_message(su_ack_err).unwrap();
+        // conn.send(&su_ack_err.to_bytes())?;
+        return Err(ServerAcceptConnError::DuplicateConnection {
+            username: username.to_string(),
+            existing_conn_id: client_id,
+        });
+    }
+    conn.set_username(username.to_string());
+
     // check if username and requested_db exist
+    check_requested_credentials(username, requested_db_name)?;
+    // send error response if credentials are invalid
 
     // send startup_ack
     println!("Sending startup ack...");
-    let salt = send_startup_ack(&mut conn, db_version).unwrap();
+    let salt =
+        get_salt_for_username(username).map_err(ServerAcceptConnError::AuthenticationFailure)?;
+    send_startup_ack(&mut conn, db_version, salt).unwrap();
     println!("Startup ack sent");
 
     // accept AuthReq
-    let auth_req = recv_auth_req(&mut conn).unwrap();
-
-    // authenticate connection
-    todo!()
-}
-
-fn recv_startup(conn: &mut Connection) -> Result<StartUp, ConnError> {
-    let su = {
-        let bytes = conn.receive()?;
-        StartUp::from_bytes(&bytes)
+    let accepted_auth_req = {
+        let msg = conn.await_message(MessageKind::ClientAuthReq).map_err(|_| ServerAcceptConnError::InvalidAuthRequest)?;
+        AuthReq::from_message(msg).map_err(|_| ServerAcceptConnError::InvalidAuthRequest)?
     };
-    Ok(su)
+    println!("Accepted auth request: {:?}", accepted_auth_req);
+
+    check_password(username, accepted_auth_req.hashed_password).map_err(|err| {
+        // send erroneours auth request ack
+        conn.send(&AuthReqAck::new_failure(err.clone()).to_bytes())
+            .unwrap();
+        ServerAcceptConnError::AuthenticationFailure(err)
+    })?;
+
+    // send AuthReqAck
+    let auth_req_ack = AuthReqAck::new_success();
+    println!("Sending this auth req ack: {:?}", auth_req_ack);
+    println!("as bytes: {:?}", auth_req_ack.to_bytes());
+    conn.send(&auth_req_ack.to_bytes())?;
+
+    Ok(conn)
 }
 
-fn send_startup_ack(conn: &mut Connection, db_version: u16) -> Result<Salt, ConnError> {
-    let (su_ack, salt) = {
-        let salt = generate_salt();
+fn handle_query(
+    conn: &mut Connection,
+    mq_sender: crossbeam_channel::Sender<QueryMessage>,
+) -> Result<QueryResponse, ConnError> {
+    let query_req = {
+        let bytes = conn.receive()?;
+        QueryRequest::from_bytes(&bytes)?
+    };
+    let (resp_tx, resp_rx) = mpsc::channel::<QueryResponse>();
+    println!("Handling query: {:?}", query_req);
+
+    // add to message queue
+    conn.response_acceptor = Some(resp_rx);
+
+    // send query request directly to threads' waiting queue
+    mq_sender
+        .send(QueryMessage::new(query_req.query, conn.conn_id, resp_tx))
+        .unwrap();
+
+    // block connection thread until it gets the response from the worker thread.
+    // After that, the client thread sends the response back to the client (over the network)
+    println!("Client thread {} waiting for response", conn.conn_id);
+    let query_response = conn.response_acceptor.as_mut().unwrap().recv().unwrap();
+    println!("Client thread got response: {:?}", query_response);
+
+    Ok(query_response)
+}
+
+fn send_startup_ack(conn: &mut Connection, db_version: u16, salt: Salt) -> Result<(), ConnError> {
+    let su_ack = {
         let payload = StartUpAckPayload::new(salt);
         let headers = StartUpAckHeaders::new_success(
             conn.version,
             db_version,
             payload.byte_length().try_into().unwrap(),
         );
-        (StartUpAck::new_success(headers, payload), salt)
+        StartUpAck::new_success(headers, payload)
     };
     println!("Sending StartUpAck: {:?}", su_ack);
     println!("StartUpAck as bytes: {:?}", su_ack.to_bytes());
-    conn.send(&su_ack.to_bytes())?;
-    Ok(salt)
+    conn.send_message(su_ack).unwrap();
+    // conn.send(&su_ack.to_bytes())?;
+    Ok(())
 }
 
-fn recv_auth_req(conn: &mut Connection) -> Result<(), ConnError> {
-    // Result<AuthReq, ConnError> {
-    todo!("Receive auth request")
+fn check_requested_credentials(
+    username: &str,
+    requested_db_name: &str,
+) -> Result<(), ServerAcceptConnError> {
+    if !requested_db_exists(requested_db_name) {
+        return Err(ServerAcceptConnError::NonExistingDb(
+            requested_db_name.to_string(),
+        ));
+    }
+    if !username_exists(username) {
+        return Err(ServerAcceptConnError::AuthenticationFailure(
+            crate::utils::errors::AuthError::UnknownUser {
+                name: username.to_string(),
+            },
+        ));
+    }
+    Ok(())
+}
+
+fn check_password(username: &str, hashed_password: PasswordHash) -> Result<(), AuthError> {
+    let pw_hash = get_users_password_hash(username)?;
+    if pw_hash != hashed_password {
+        return Err(AuthError::InvalidPassword);
+    }
+    Ok(())
 }

@@ -1,9 +1,26 @@
 pub trait Serializable {
     fn to_bytes(&self) -> Vec<u8>;
-    fn from_bytes(bytes: &[u8]) -> Self;
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError>
+    where
+        Self: std::marker::Sized;
 
     fn byte_length(&self) -> usize {
         self.to_bytes().len()
+    }
+}
+
+#[derive(Debug)]
+pub struct FromBytesError {}
+impl FromBytesError {
+    pub fn new() -> Self {
+        FromBytesError {}
+    }
+}
+
+impl std::error::Error for FromBytesError {}
+impl std::fmt::Display for FromBytesError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "From bytes error: {:?}", self)
     }
 }
 

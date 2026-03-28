@@ -5,12 +5,13 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::utils::constants::server::{CLOSE_CONNECTION_MSG, PORT, get_host_name_full};
+use crate::utils::constants::server::{CLOSE_CONNECTION_MSG, DEFAULT_PORT, get_host_name_full};
 
 pub type ConnectionId = u64;
+pub type ResponseSenderId = u64;
 
 pub fn init_server() {
-    println!("Initializing server on port {}", PORT);
+    println!("Initializing server on port {}", DEFAULT_PORT);
     let mut active_conns: HashMap<ConnectionId, Arc<Mutex<TcpStream>>> = HashMap::new();
     let listener =
         TcpListener::bind(get_host_name_full()).expect("Failed to bind listener to port {PORT}");

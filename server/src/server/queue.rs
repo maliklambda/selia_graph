@@ -1,29 +1,30 @@
 use std::{
     collections::VecDeque,
-    sync::{Condvar, Mutex},
+    sync::{Arc, Condvar, Mutex},
 };
 
-use crate::connection::Connection;
+use crate::protocol::messages::QueryMessage;
 
+#[derive(Debug)]
 pub struct MessageQueue {
-    pub messages: Mutex<VecDeque<Connection>>,
+    pub messages: Arc<Mutex<VecDeque<QueryMessage>>>,
     pub condvar: Condvar,
 }
 
 impl MessageQueue {
     pub fn new() -> Self {
         MessageQueue {
-            messages: Mutex::new(VecDeque::new()),
+            messages: Arc::new(Mutex::new(VecDeque::new())),
             condvar: Condvar::new(),
         }
     }
 
-    pub fn push(&mut self, conn: Connection) {
-        self.messages.lock().unwrap().push_back(conn);
-        self.condvar.notify_one(); // wake up worker 
+    pub fn push(&self, msg: QueryMessage) {
+        self.messages.lock().unwrap().push_back(msg);
+        self.condvar.notify_one(); // wake up worker
     }
 
-    pub fn pop(&mut self) -> Connection {
+    pub fn pop(&mut self) -> QueryMessage {
         let mut q = self.messages.lock().unwrap();
         while q.is_empty() {
             q = self.condvar.wait(q).unwrap(); // wait until pushed element notifies
