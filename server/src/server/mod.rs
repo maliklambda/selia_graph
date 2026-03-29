@@ -4,9 +4,10 @@ use std::{
     thread,
 };
 
+use scyfi::runtime::Runtime;
 use selia::{
     base_types::{QueryMessage, QueryResponse, Serializable},
-    db::db::{DB, GraphDB, Version},
+    db::db::Version,
 };
 
 use crate::{
@@ -24,7 +25,6 @@ use crate::{
     query::QueryRequest,
     server::{
         open_connections::{ConnectionRef, OpenConnections},
-        worker::spawn_worker,
     },
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
@@ -34,7 +34,7 @@ use crate::{
             AuthError, ConnError, ServerAcceptConnError,
             server_errors::{ServerError, ServerInitError},
         },
-        mocks::{init_db_mocked, requested_db_exists, username_exists},
+        mocks::{requested_db_exists, username_exists},
         types::{PasswordHash, Salt},
     },
 };
@@ -47,12 +47,12 @@ mod worker;
 #[derive(Debug)]
 pub struct Server {
     version: Version,
-    selected_db: GraphDB, // TODO: enable multiple GraphDB handles
+    runtime: Runtime,
 
-    // concurrency stuff
+    // listen for new connections
     listener: TcpListener,
+    // keep track of open connection threads
     open_connections: OpenConnections,
-    mq_sender: crossbeam_channel::Sender<QueryMessage>,
 }
 
 impl Server {
@@ -64,32 +64,19 @@ impl Server {
         println!("server args: {:?}", server_cli_args);
         let listener = TcpListener::bind(server_cli_args.addr)?;
 
-        // TODO: init runtime -> runtime inits everything else
-
-        // init startup db
-        let selected_db =
-            init_db_mocked(&server_cli_args.selected_db, server_cli_args.db_version).unwrap();
-        let db = selected_db.db.clone();
-
-        // init message queue
-        let (msg_sender, msg_receiver) =
-            crossbeam_channel::bounded::<QueryMessage>(MAX_STORED_MESSAGES);
-
-        // spawn worker threads
-        for worker_id in 0..server_cli_args.num_worker_threads {
-            // clone message queue
-            let mq_recv_clone = msg_receiver.clone();
-            let db_handle = DB::new(&db);
-            let _worker_handle =
-                thread::spawn(move || spawn_worker(worker_id, db_handle, mq_recv_clone));
-        }
+        // Init runtime -> runtime inits everything else
+        let runtime = Runtime::new(
+            vec![server_cli_args.selected_db],
+            server_cli_args.db_version,
+            server_cli_args.num_worker_threads as usize,
+            MAX_STORED_MESSAGES,
+        ).unwrap();
 
         Ok(Server {
             version: server_cli_args.db_version,
             listener,
             open_connections: OpenConnections::new(),
-            selected_db,
-            mq_sender: msg_sender,
+            runtime,
         })
     }
 
@@ -106,7 +93,7 @@ impl Server {
                         .last_id
                         .fetch_add(1, Ordering::Relaxed);
                     let open_conns_clone = self.open_connections.clone();
-                    let mq_sender = self.mq_sender.clone();
+                    let mq_sender = self.runtime.msg_sender.clone();
                     let _handle = thread::spawn(move || {
                         handle_client(stream, open_conns_clone, client_id, mq_sender)
                     });

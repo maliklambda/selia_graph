@@ -47,24 +47,29 @@ impl WorkerThread {
     pub fn execute_query(&mut self, query: String) -> Result<QueryResponse, QueryExecutionError> {
         // mock execution of query
         std::thread::sleep(Duration::from_secs(1));
-        Ok(QueryResponse::default())
+        Ok(QueryResponse::default(&query))
     }
 }
 
 #[derive(Debug)]
 pub struct Runtime {
     // worker threads
-    workers: Vec<JoinHandle<Result<(), QueryExecutionError>>>,
-    max_workers: usize,
+    pub workers: Vec<JoinHandle<Result<(), QueryExecutionError>>>,
+    // Max number of workers
+    pub max_workers: usize,
 
     // keep reference of opened dbs for worker threads
-    selected_dbs: Vec<GraphDB>,
+    pub selected_dbs: Vec<GraphDB>,
 
     // message queue: runtime uses mostly sender to send messages
-    msg_sender: Sender<QueryMessage>,
+    pub msg_sender: Sender<QueryMessage>,
+
     // message queue: worker threads use receiver to process messages
-    msg_receiver: Receiver<QueryMessage>,
-    max_stored_messages: usize,
+    pub msg_receiver: Receiver<QueryMessage>,
+
+    //length of message queue. 
+    //If queue is full, then all requests will be denied with "MessageQueue filled error".
+    pub max_stored_messages: usize,
 }
 
 impl Runtime {

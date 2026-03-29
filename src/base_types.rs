@@ -54,10 +54,10 @@ pub struct QueryResponse {
 }
 
 impl QueryResponse {
-    pub fn default() -> Self {
+    pub fn default(query: &str) -> Self {
         let qrp = QueryResponsePackage::new(
             QueryResponsePackageType::Debug,
-            "Hello world from worker thread".as_bytes().to_vec(),
+            format!("Hello world from worker thread that processes: {query}").as_bytes().to_vec(),
         );
         QueryResponse {
             packages: vec![qrp],
