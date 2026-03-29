@@ -9,3 +9,4 @@ sha2 = "0.10.9"
 selia = { path = ".." }
 crossbeam-channel = "0.5.15"
 sypher = { path = "../Sypher"}
+scyfi = { path = "../scy-fi" }
