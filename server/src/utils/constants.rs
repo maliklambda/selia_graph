@@ -31,6 +31,8 @@ pub mod versioning {
 
 pub mod cmd_line_args {
     pub const FLAG_INDICATOR: char = '-';
+    pub const HELP_STR: &str = "--help";
+    pub const HELP_STR_SHORT: &str = "-h";
 
     pub mod server {
         pub const HOST_STR: &str = "--host";

@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::utils::constants::cmd_line_args::FLAG_INDICATOR;
+use crate::utils::constants::cmd_line_args::{FLAG_INDICATOR, client::NUM_EXPECTED_PROTOCOL_ARGS};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CliArg {
@@ -125,10 +125,10 @@ pub mod server_cli {
 
     use crate::utils::{
         cli::{
-            BadArgumentsError, CliArg, StringArgToValue, parse_single_value_arg, prepare_cli_args,
+            BadArgumentsError, CliArg, StringArgToValue, display_server_help_options, parse_single_value_arg, prepare_cli_args
         },
         constants::{
-            cmd_line_args::server::*,
+            cmd_line_args::{HELP_STR, HELP_STR_SHORT, server::*},
             server::{DEFAULT_HOST, DEFAULT_NUM_WORKERS, DEFAULT_PORT, DEFAULT_SELECTED_DB},
             versioning::{DEFAULT_DB_VERSION_MAJOR, DEFAULT_DB_VERSION_MINOR},
         },
@@ -159,6 +159,10 @@ pub mod server_cli {
                 // no arguments given -> use default for everything
                 println!("Default server cli args");
                 return Ok(ServerCliArgs::default());
+            }
+            if raw_args[0] == HELP_STR || raw_args[0] == HELP_STR_SHORT {
+                display_server_help_options();
+                panic!("Return gracefully after help message");
             }
             let cli_args: Vec<CliArg> = prepare_cli_args(raw_args).unwrap();
 
@@ -215,11 +219,11 @@ pub mod client_cli {
 
     use crate::utils::{
         cli::{
-            BadArgumentsError, CliArg, StringArgToValue, parse_single_value_arg, prepare_cli_args,
+            BadArgumentsError, CliArg, StringArgToValue, display_client_help_options, parse_single_value_arg, prepare_cli_args
         },
         constants::{
             client::*,
-            cmd_line_args::client::*,
+            cmd_line_args::{HELP_STR, HELP_STR_SHORT, client::*},
             server::{DEFAULT_HOST, DEFAULT_PORT},
             versioning::*,
         },
@@ -256,6 +260,10 @@ pub mod client_cli {
                 // no arguments given -> use default for everything
                 println!("Default server cli args");
                 return Ok(ClientCliArgs::default());
+            }
+            if raw_args[0] == HELP_STR || raw_args[0] == HELP_STR_SHORT {
+                display_client_help_options();
+                panic!("Return gracefully after help message");
             }
             let cli_args: Vec<CliArg> = prepare_cli_args(raw_args).unwrap();
 
@@ -391,4 +399,27 @@ fn test_cli_prep() {
         },
     ];
     assert_eq!(prepped_args, expected);
+}
+
+pub fn display_client_help_options() {
+    use crate::utils::constants::cmd_line_args::client::*;
+    println!("Options for '$ cargo run client':");
+    // TODO: make this dynamic (save all options in an array)
+    println!("\t{REQUESTED_DB_STR} {REQUESTED_DB_STR_SHORT}: {NUM_EXPECTED_REQUESTED_DB_ARGS}");
+    println!("\t{REQUESTED_HOST_STR} {REQUESTED_HOST_STR_SHORT}: {NUM_EXPECTED_REQUESTED_HOST_ARGS}");
+    println!("\t{REQUESTED_PORT_STR} {REQUESTED_PORT_STR_SHORT}: {NUM_EXPECTED_REQUESTED_PORT_ARGS}");
+    println!("\t{PASSWORD_STR} {PASSWORD_STR_SHORT}: {NUM_EXPECTED_PASSWORD_ARGS}");
+    println!("\t{USERNAME_STR} {USERNAME_STR_SHORT}: {NUM_EXPECTED_USERNAME_ARGS}");
+    println!("\t{PROTOCOL_STR} {PROTOCOL_STR_SHORT}: {NUM_EXPECTED_PROTOCOL_ARGS}");
+}
+
+
+pub fn display_server_help_options() {
+    use crate::utils::constants::cmd_line_args::server::*;
+    println!("Options for '$ cargo run server':");
+    // TODO: make this dynamic (save all options in an array)
+    println!("\t{HOST_STR} {HOST_STR_SHORT} {NUM_EXPECTED_HOST_ARGS}");
+    println!("\t{PORT_STR} {PORT_STR_SHORT} {NUM_EXPECTED_PORT_ARGS}");
+    println!("\t{VERSION_STR} {VERSION_STR_SHORT} {NUM_EXPECTED_VERSION_ARGS}");
+    println!("\t{NUM_WORKERS_STR} {NUM_WORKERS_STR_SHORT} {NUM_EXPECTED_NUM_WORKERS_ARGS}");
 }
