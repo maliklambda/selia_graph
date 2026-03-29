@@ -1,7 +1,12 @@
+use selia::{
+    base_types::Serializable,
+    errors::{FromBytesError, U8EnumConversionError},
+};
+
 use crate::{
     protocol::messages::{FromMessageError, Message, MessageAble, MessageHeader, MessageKind},
-    serialization::{FromBytesError, Serializable, string_from_bytes, string_to_bytes},
-    utils::{errors::U8EnumConversionError, types::Salt},
+    serialization::{string_from_bytes, string_to_bytes},
+    utils::types::Salt,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -42,10 +47,7 @@ impl MessageAble for StartUpAck {
             Ok(StartUpAckPayload::from_bytes(&msg.payload)
                 .map_err(|_| FromMessageError::CastHeaderFailure)?)
         };
-        Ok(Self {
-            header,
-            payload,
-        })
+        Ok(Self { header, payload })
     }
 }
 

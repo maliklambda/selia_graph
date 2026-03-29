@@ -1,9 +1,10 @@
+use selia::{base_types::Serializable, errors::FromBytesError};
+
 use crate::{
     protocol::{
         Header,
         messages::{FromMessageError, Message, MessageAble},
     },
-    serialization::{FromBytesError, Serializable},
     utils::errors::AuthError,
 };
 

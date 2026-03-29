@@ -1,8 +1,9 @@
-use crate::{
-    protocol::messages::MessageAble,
-    serialization::{FromBytesError, Serializable},
-    utils::errors::{U8EnumConversionError, client_errors::ClientError},
+use selia::{
+    base_types::Serializable,
+    errors::{FromBytesError, U8EnumConversionError},
 };
+
+use crate::protocol::messages::MessageAble;
 
 #[derive(Debug)]
 pub struct QueryRequest {

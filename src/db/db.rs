@@ -15,7 +15,6 @@ pub struct GraphDB {
     pub config: ConfigHandle,
 }
 
-
 impl GraphDB {
     pub fn new (db_name: &str, version: Version) -> Result<Self, DBInitError> {
         let path = &db_root_path(db_name);
@@ -273,6 +272,7 @@ impl DBInner {
 }
 
 
+#[derive(Debug)]
 pub struct DB {
     pub db: DBInnerHandle,
 }

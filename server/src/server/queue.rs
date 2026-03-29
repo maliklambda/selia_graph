@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Condvar, Mutex},
 };
 
-use crate::protocol::messages::QueryMessage;
+use selia::base_types::QueryMessage;
 
 #[derive(Debug)]
 pub struct MessageQueue {

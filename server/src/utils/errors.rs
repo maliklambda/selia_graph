@@ -1,18 +1,17 @@
 use std::{fmt::Display, sync::mpsc::RecvError};
 
+use selia::{base_types::Serializable, errors::FromBytesError};
+
 use crate::{
-    protocol::{
-        messages::{FromMessageError, SendMessageError},
-        startup_ack::StartUpAckErr,
-    },
-    serialization::{FromBytesError, Serializable},
+    protocol::{messages::FromMessageError, startup_ack::StartUpAckErr},
     server::legacy::ConnectionId,
 };
 
 pub mod client_errors {
+    use selia::errors::FromBytesError;
+
     use crate::{
         protocol::startup_ack::StartUpAckErr,
-        serialization::FromBytesError,
         utils::{
             cli::BadArgumentsError,
             errors::{AuthError, ConnError, ProtocolError},
@@ -196,29 +195,6 @@ impl From<FromMessageError> for ConnError {
 impl From<FromBytesError> for ConnError {
     fn from(value: FromBytesError) -> Self {
         Self::MessageConversion(Box::new(value))
-    }
-}
-
-#[derive(Debug)]
-pub struct U8EnumConversionError {
-    invalid_value: u8,
-}
-
-impl U8EnumConversionError {
-    pub fn new(val: u8) -> Self {
-        U8EnumConversionError { invalid_value: val }
-    }
-}
-
-impl std::error::Error for U8EnumConversionError {}
-
-impl std::fmt::Display for U8EnumConversionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Converting {} to an enum has failed.",
-            self.invalid_value
-        )
     }
 }
 

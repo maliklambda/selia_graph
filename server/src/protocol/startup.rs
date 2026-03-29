@@ -1,6 +1,8 @@
+use selia::{base_types::Serializable, errors::FromBytesError};
+
 use crate::{
     protocol::messages::{FromMessageError, Message, MessageAble, MessageKind},
-    serialization::{FromBytesError, Serializable, string_from_bytes, string_to_bytes},
+    serialization::{string_from_bytes, string_to_bytes},
     utils::types::Encoding,
 };
 

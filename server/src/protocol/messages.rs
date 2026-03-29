@@ -1,11 +1,6 @@
-use std::sync::mpsc;
+use selia::{base_types::Serializable, errors::FromBytesError};
 
-use crate::{
-    query::QueryResponse,
-    serialization::{FromBytesError, Serializable},
-    server::legacy::ConnectionId,
-    utils::errors::ConnError,
-};
+use crate::utils::errors::ConnError;
 
 #[derive(Debug)]
 pub struct Message {
@@ -254,29 +249,6 @@ impl From<MessageKind> for u8 {
             MessageKind::ClientQueryReq => 4,
             MessageKind::ServerQueryResponse => 5,
             MessageKind::UnknownMessageType(_) => 6,
-        }
-    }
-}
-
-pub type ResponseSender = mpsc::Sender<QueryResponse>;
-
-#[derive(Debug)]
-pub struct QueryMessage {
-    pub query: String,
-    pub conn_id: ConnectionId,
-
-    // Response channel is sent with each message.
-    // This bridges the gap between connection and worker thread.
-    // This allows the MessageQueue to be unidirected (connection -> worker).
-    pub response_channel: ResponseSender,
-}
-
-impl QueryMessage {
-    pub fn new(query: String, conn_id: ConnectionId, rx: ResponseSender) -> Self {
-        QueryMessage {
-            query,
-            conn_id,
-            response_channel: rx,
         }
     }
 }

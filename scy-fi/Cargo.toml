@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 sypher = { path = "../Sypher" }
 selia = { path = ".." }
+crossbeam-channel = "0.5.15"

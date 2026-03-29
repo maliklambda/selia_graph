@@ -1,13 +1,11 @@
+use selia::base_types::{ResponseAcceptor, Serializable};
 use std::{
     io::{Read, Write},
     net::TcpStream,
-    sync::mpsc,
 };
 
 use crate::{
     protocol::{communicator::Communicator, messages::Message},
-    query::QueryResponse,
-    serialization::Serializable,
     utils::errors::ConnError,
 };
 
@@ -22,8 +20,6 @@ pub enum ConnStatus {
     Busy,
     Closed,
 }
-
-pub type ResponseAcceptor = mpsc::Receiver<QueryResponse>;
 
 #[derive(Debug)]
 pub struct Connection {

@@ -1,10 +1,13 @@
 use std::{
     net::{TcpListener, TcpStream},
-    sync::{atomic::Ordering, mpsc},
+    sync::atomic::Ordering,
     thread,
 };
 
-use selia::db::db::{DB, GraphDB, Version};
+use selia::{
+    base_types::{QueryMessage, QueryResponse, Serializable},
+    db::db::{DB, GraphDB, Version},
+};
 
 use crate::{
     connection::Connection,
@@ -12,14 +15,13 @@ use crate::{
         auth_req::AuthReq,
         auth_req_ack::AuthReqAck,
         communicator::Communicator,
-        messages::{MessageAble, MessageKind, QueryMessage},
+        messages::{MessageAble, MessageKind},
         startup::StartUp,
         startup_ack::{
             StartUpAck, StartUpAckErr, StartUpAckErrReason, StartUpAckHeaders, StartUpAckPayload,
         },
     },
-    query::{QueryRequest, QueryResponse},
-    serialization::Serializable,
+    query::QueryRequest,
     server::{
         open_connections::{ConnectionRef, OpenConnections},
         worker::spawn_worker,
@@ -250,7 +252,9 @@ fn accept_connection(
 
     // accept AuthReq
     let accepted_auth_req = {
-        let msg = conn.await_message(MessageKind::ClientAuthReq).map_err(|_| ServerAcceptConnError::InvalidAuthRequest)?;
+        let msg = conn
+            .await_message(MessageKind::ClientAuthReq)
+            .map_err(|_| ServerAcceptConnError::InvalidAuthRequest)?;
         AuthReq::from_message(msg).map_err(|_| ServerAcceptConnError::InvalidAuthRequest)?
     };
     println!("Accepted auth request: {:?}", accepted_auth_req);
@@ -279,7 +283,7 @@ fn handle_query(
         let bytes = conn.receive()?;
         QueryRequest::from_bytes(&bytes)?
     };
-    let (resp_tx, resp_rx) = mpsc::channel::<QueryResponse>();
+    let (resp_tx, resp_rx) = crossbeam_channel::unbounded::<QueryResponse>();
     println!("Handling query: {:?}", query_req);
 
     // add to message queue

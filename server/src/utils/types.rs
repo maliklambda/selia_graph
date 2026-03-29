@@ -1,4 +1,6 @@
-use crate::utils::{constants::HASH_LENGTH_BYTES, errors::U8EnumConversionError};
+use selia::errors::U8EnumConversionError;
+
+use crate::utils::constants::HASH_LENGTH_BYTES;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]

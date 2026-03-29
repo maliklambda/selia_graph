@@ -1,6 +1,7 @@
+use selia::{base_types::Serializable, errors::FromBytesError};
+
 use crate::{
     protocol::messages::{FromMessageError, Message, MessageAble, MessageKind},
-    serialization::{FromBytesError, Serializable},
     utils::{constants::HASH_LENGTH_BYTES, types::PasswordHash},
 };
 
@@ -18,7 +19,11 @@ impl AuthReq {
 impl MessageAble for AuthReq {
     fn to_message(self) -> Message {
         // send empty vec as header
-        Message::new(MessageKind::ClientAuthReq, vec![], self.hashed_password.to_vec())
+        Message::new(
+            MessageKind::ClientAuthReq,
+            vec![],
+            self.hashed_password.to_vec(),
+        )
     }
 
     fn from_message(msg: Message) -> Result<Self, FromMessageError> {
@@ -27,7 +32,6 @@ impl MessageAble for AuthReq {
         Ok(Self::new(hash.try_into().unwrap()))
     }
 }
-
 
 impl Serializable for AuthReq {
     fn to_bytes(&self) -> Vec<u8> {

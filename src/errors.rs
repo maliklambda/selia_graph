@@ -149,3 +149,41 @@ pub enum VertexCreationFailure {
     Other,
 }
 
+#[derive(Debug)]
+pub struct FromBytesError {}
+impl FromBytesError {
+    pub fn new() -> Self {
+        FromBytesError {}
+    }
+}
+
+impl std::error::Error for FromBytesError {}
+impl std::fmt::Display for FromBytesError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "From bytes error: {:?}", self)
+    }
+}
+
+
+#[derive(Debug)]
+pub struct U8EnumConversionError {
+    invalid_value: u8,
+}
+
+impl U8EnumConversionError {
+    pub fn new(val: u8) -> Self {
+        U8EnumConversionError { invalid_value: val }
+    }
+}
+
+impl std::error::Error for U8EnumConversionError {}
+
+impl std::fmt::Display for U8EnumConversionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Converting {} to an enum has failed.",
+            self.invalid_value
+        )
+    }
+}

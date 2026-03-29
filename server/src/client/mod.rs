@@ -1,3 +1,4 @@
+use selia::base_types::Serializable;
 use std::net::{IpAddr, SocketAddr, TcpStream};
 
 use crate::{
@@ -6,12 +7,11 @@ use crate::{
         auth_req::AuthReq,
         auth_req_ack::{AuthReqAck, AuthReqAckPayload},
         communicator::Communicator,
-        messages::{Message, MessageAble, MessageKind},
+        messages::{MessageAble, MessageKind},
         startup::StartUp,
         startup_ack::StartUpAck,
     },
     query::{QueryRequest, QueryResponse, QueryResponsePackage},
-    serialization::Serializable,
     utils::{
         auth::hash_password,
         cli::client_cli::ClientCliArgs,
@@ -176,7 +176,12 @@ impl Client {
     pub fn recv_startup_ack(&mut self) -> Result<StartUpAck, ConnError> {
         println!("receiving startup ack");
         let su_ack = {
-            let msg = self.connection.as_mut().unwrap().await_message(MessageKind::ServerStartupAck).unwrap();
+            let msg = self
+                .connection
+                .as_mut()
+                .unwrap()
+                .await_message(MessageKind::ServerStartupAck)
+                .unwrap();
             StartUpAck::from_message(msg).unwrap()
         };
         Ok(su_ack)
@@ -198,7 +203,11 @@ impl Client {
 
         // send hash to server via auth request
         let auth_req = AuthReq::new(hashed_pw);
-        self.connection.as_mut().unwrap().send_message(auth_req).unwrap();
+        self.connection
+            .as_mut()
+            .unwrap()
+            .send_message(auth_req)
+            .unwrap();
 
         // receive server response (auth_req_ack)
         self.recv_auth_req_ack()
