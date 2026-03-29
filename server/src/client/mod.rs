@@ -75,7 +75,7 @@ impl Client {
         let qr = QueryRequest::new(query_str);
 
         // send query request
-        self.connection.as_mut().unwrap().send(&qr.to_bytes())?;
+        self.connection.as_mut().unwrap().send_message(qr).unwrap();
 
         let query_res = {
             let bytes = self.connection.as_mut().unwrap().receive().unwrap();

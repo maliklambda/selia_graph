@@ -125,7 +125,8 @@ pub mod server_cli {
 
     use crate::utils::{
         cli::{
-            BadArgumentsError, CliArg, StringArgToValue, display_server_help_options, parse_single_value_arg, prepare_cli_args
+            BadArgumentsError, CliArg, StringArgToValue, display_server_help_options,
+            parse_single_value_arg, prepare_cli_args,
         },
         constants::{
             cmd_line_args::{HELP_STR, HELP_STR_SHORT, server::*},
@@ -219,7 +220,8 @@ pub mod client_cli {
 
     use crate::utils::{
         cli::{
-            BadArgumentsError, CliArg, StringArgToValue, display_client_help_options, parse_single_value_arg, prepare_cli_args
+            BadArgumentsError, CliArg, StringArgToValue, display_client_help_options,
+            parse_single_value_arg, prepare_cli_args,
         },
         constants::{
             client::*,
@@ -406,13 +408,16 @@ pub fn display_client_help_options() {
     println!("Options for '$ cargo run client':");
     // TODO: make this dynamic (save all options in an array)
     println!("\t{REQUESTED_DB_STR} {REQUESTED_DB_STR_SHORT}: {NUM_EXPECTED_REQUESTED_DB_ARGS}");
-    println!("\t{REQUESTED_HOST_STR} {REQUESTED_HOST_STR_SHORT}: {NUM_EXPECTED_REQUESTED_HOST_ARGS}");
-    println!("\t{REQUESTED_PORT_STR} {REQUESTED_PORT_STR_SHORT}: {NUM_EXPECTED_REQUESTED_PORT_ARGS}");
+    println!(
+        "\t{REQUESTED_HOST_STR} {REQUESTED_HOST_STR_SHORT}: {NUM_EXPECTED_REQUESTED_HOST_ARGS}"
+    );
+    println!(
+        "\t{REQUESTED_PORT_STR} {REQUESTED_PORT_STR_SHORT}: {NUM_EXPECTED_REQUESTED_PORT_ARGS}"
+    );
     println!("\t{PASSWORD_STR} {PASSWORD_STR_SHORT}: {NUM_EXPECTED_PASSWORD_ARGS}");
     println!("\t{USERNAME_STR} {USERNAME_STR_SHORT}: {NUM_EXPECTED_USERNAME_ARGS}");
     println!("\t{PROTOCOL_STR} {PROTOCOL_STR_SHORT}: {NUM_EXPECTED_PROTOCOL_ARGS}");
 }
-
 
 pub fn display_server_help_options() {
     use crate::utils::constants::cmd_line_args::server::*;

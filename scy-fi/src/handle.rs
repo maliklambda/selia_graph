@@ -3,6 +3,8 @@ use sypher::parser::{objects::QueryObject, subqueries::tree::QueryTree};
 
 use crate::{errors::HandleError, operations, types::HandleResultResponse};
 
+
+
 pub fn handle_query(db: &DB, query_tree: QueryTree) -> Result<HandleResultResponse, HandleError> {
     for q in query_tree.clone() {
         let k = q.borrow().value;

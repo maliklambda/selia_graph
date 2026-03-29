@@ -1,5 +1,5 @@
 mod errors;
-mod handle;
+pub mod handle;
 mod operations;
 pub mod runtime;
 mod types;

@@ -3,9 +3,9 @@ use selia::{
     errors::{FromBytesError, U8EnumConversionError},
 };
 
-use crate::protocol::messages::MessageAble;
+use crate::{protocol::messages::{FromMessageError, Message, MessageAble, MessageKind}, serialization::string_from_bytes};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct QueryRequest {
     pub query_length: u16,
     pub query: String,
@@ -23,19 +23,31 @@ impl QueryRequest {
 }
 
 impl MessageAble for QueryRequest {
-    fn to_message(self) -> crate::protocol::messages::Message {
-        todo!("query req -> message")
+    fn to_message(self) -> Message {
+        let header: Vec<u8> = vec![]; // empty header
+        let payload = self.to_bytes();
+        Message::new(MessageKind::ClientQueryReq, header, payload)
     }
 
     fn from_message(
-        msg: crate::protocol::messages::Message,
-    ) -> Result<Self, crate::protocol::messages::FromMessageError> {
-        todo!("message -> query req")
+        msg: Message,
+    ) -> Result<Self, FromMessageError> {
+        // disregard empty header
+        let mut idx = 0;
+        let length = {
+            let len = u16::from_le_bytes(msg.payload[0..std::mem::size_of::<u16>()].try_into().unwrap());
+            idx += std::mem::size_of::<u16>();
+            len
+        };
+        assert_eq!(msg.payload.len() - idx, length as usize);
+        let s = String::from_utf8(msg.payload[idx..].to_vec()).unwrap();
+        Ok(Self::new(&s))
     }
 }
 
 impl Serializable for QueryRequest {
     fn to_bytes(&self) -> Vec<u8> {
+        println!("Turning QR: {:?} to bytes", self);
         let b_length = {
             let bytes = self.query_length.to_le_bytes();
             bytes.to_vec()
@@ -65,10 +77,28 @@ impl Serializable for QueryRequest {
             idx += std::mem::size_of::<u16>();
             l
         };
-        let s = String::from_utf8_lossy(&bytes[idx..length as usize]);
+        assert_eq!(length as usize, bytes.len() - idx);
+        let s = String::from_utf8_lossy(&bytes[idx..]);
 
         Ok(QueryRequest::new(&s))
     }
+}
+
+#[test]
+fn test_serializable_query_request () {
+    let qr_original = QueryRequest::new("Some_query");
+    let bytes = qr_original.to_bytes();
+    let other_qr = QueryRequest::from_bytes(&bytes).unwrap();
+    assert_eq!(qr_original, other_qr)
+}
+
+
+#[test]
+fn test_messageable_query_request () {
+    let qr_original = QueryRequest::new("Some_query");
+    let msg = qr_original.clone().to_message();
+    let other_qr = QueryRequest::from_message(msg).unwrap();
+    assert_eq!(qr_original, other_qr)
 }
 
 #[derive(Debug)]
@@ -137,6 +167,9 @@ impl Serializable for QueryResponsePackage {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
+        if bytes.is_empty() {
+            return Err(FromBytesError::new())
+        }
         let mut idx = 0;
         let package_type = {
             let tp: QueryResponsePackageType =

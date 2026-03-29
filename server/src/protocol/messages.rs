@@ -130,13 +130,21 @@ pub enum FromMessageError {
     },
     CastHeaderFailure,
     CastPayloadFailure,
+    EmptyMessage,
 }
 
 impl std::error::Error for FromMessageError {}
 impl std::fmt::Display for FromMessageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            _ => write!(f, "Default error message"),
+            Self::WrongMessageKind { expected, got } => write!(
+                f,
+                "Wrong message kind. Expected: '{:?}', got '{:?}'",
+                expected, got
+            ),
+            Self::EmptyMessage => write!(f, "Received empty message"),
+            Self::CastHeaderFailure => write!(f, "Failed to cast header"),
+            Self::CastPayloadFailure => write!(f, "Failed to cast payload"),
         }
     }
 }

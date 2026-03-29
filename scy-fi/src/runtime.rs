@@ -3,15 +3,20 @@ use selia::{
     base_types::{QueryMessage, QueryResponse},
     db::db::{DB, GraphDB, Version},
 };
+use sypher::parser::{errors::ParseQueryError, query::Query};
 use std::{
     thread::{self, JoinHandle},
     time::Duration,
 };
 
-use crate::errors::{RuntimeInitError, SpawnWorkerError};
+use crate::{errors::{HandleError, RuntimeInitError, SpawnWorkerError}, handle::handle_query};
 
 #[derive(Debug)]
-pub enum QueryExecutionError {}
+pub enum QueryExecutionError {
+    ParseQueryError(ParseQueryError),
+    ExecuteQueryError(HandleError),
+
+}
 
 #[derive(Debug)]
 pub struct WorkerThread {
@@ -44,10 +49,16 @@ impl WorkerThread {
         }
     }
 
-    pub fn execute_query(&mut self, query: String) -> Result<QueryResponse, QueryExecutionError> {
+    pub fn execute_query(&mut self, query_str: String) -> Result<QueryResponse, QueryExecutionError> {
         // mock execution of query
+        println!("Worker thread #{} is processing: '{query_str}'", self.id);
+        let query = Query::from_str(&query_str);
+        let query_tree = sypher::parser::parse_query::parse_query(query).map_err(QueryExecutionError::ParseQueryError)?;
+        // TODO: select corret DB from self.db_handles (select by dbname)
+        let response = handle_query(&self.db_handles[0], query_tree).map_err(QueryExecutionError::ExecuteQueryError)?;
+        println!("Received response: {:?}", response);
         std::thread::sleep(Duration::from_secs(1));
-        Ok(QueryResponse::default(&query))
+        Ok(QueryResponse::default(&query_str))
     }
 }
 

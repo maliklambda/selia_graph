@@ -23,9 +23,7 @@ use crate::{
         },
     },
     query::QueryRequest,
-    server::{
-        open_connections::{ConnectionRef, OpenConnections},
-    },
+    server::open_connections::{ConnectionRef, OpenConnections},
     utils::{
         auth::{get_salt_for_username, get_users_password_hash},
         cli::server_cli::ServerCliArgs,
@@ -70,7 +68,8 @@ impl Server {
             server_cli_args.db_version,
             server_cli_args.num_worker_threads as usize,
             MAX_STORED_MESSAGES,
-        ).unwrap();
+        )
+        .unwrap();
 
         Ok(Server {
             version: server_cli_args.db_version,
@@ -267,8 +266,8 @@ fn handle_query(
     mq_sender: crossbeam_channel::Sender<QueryMessage>,
 ) -> Result<QueryResponse, ConnError> {
     let query_req = {
-        let bytes = conn.receive()?;
-        QueryRequest::from_bytes(&bytes)?
+        let msg = conn.await_message(MessageKind::ClientQueryReq).unwrap();
+        QueryRequest::from_message(msg).unwrap()
     };
     let (resp_tx, resp_rx) = crossbeam_channel::unbounded::<QueryResponse>();
     println!("Handling query: {:?}", query_req);
