@@ -164,6 +164,7 @@ pub enum ConnError {
     NoTcpConnection,
     ClientWriteErr,
     ClientReadErr,
+    EmptyMessage,
     FailedQueryResponse(crossbeam_channel::RecvError),
     MessageConversion(Box<dyn std::error::Error>),
 }
@@ -175,6 +176,7 @@ impl std::fmt::Display for ConnError {
         match self {
             Self::NoTcpConnection => write!(f, "No tcp connection established."),
             Self::ClientWriteErr => write!(f, "Client write failed."),
+            Self::EmptyMessage => write!(f, "Received empty message"),
             Self::ClientReadErr => write!(f, "Client read failed."),
             Self::FailedQueryResponse(recv_err) => {
                 write!(f, "Client received erroneous query response: {recv_err}")

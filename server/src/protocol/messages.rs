@@ -35,6 +35,9 @@ impl Serializable for Message {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, FromBytesError> {
+        if bytes.is_empty() {
+            return Err(FromBytesError::new())
+        }
         let mut idx = 0;
         let message_header = {
             let mh =

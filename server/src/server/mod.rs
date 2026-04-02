@@ -147,11 +147,13 @@ fn handle_client(
                     Err(err) => {
                         println!("Error in handling query: {err}");
                         {
+                            println!("Removing current connection: {} '{}'", conn.conn_id, conn.username.unwrap());
                             // remove current connection from open_connections
                             open_connections
                                 .lock()
                                 .unwrap()
                                 .retain_mut(|connection| connection.conn_id != conn.conn_id);
+                            println!("current conns: {:?}", open_connections);
                         }
                         break;
                     }
@@ -276,7 +278,7 @@ fn handle_query(
     mq_sender: crossbeam_channel::Sender<QueryMessage>,
 ) -> Result<QueryResponse, ConnError> {
     let query_req = {
-        let msg = conn.await_message(MessageKind::ClientQueryReq).unwrap();
+        let msg = conn.await_message(MessageKind::ClientQueryReq).map_err(|_| ConnError::EmptyMessage)?;
         QueryRequest::from_message(msg).unwrap()
     };
     let (resp_tx, resp_rx) = crossbeam_channel::unbounded::<QueryResponse>();
