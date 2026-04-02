@@ -10,3 +10,4 @@ selia = { path = ".." }
 crossbeam-channel = "0.5.15"
 sypher = { path = "../Sypher"}
 scyfi = { path = "../scy-fi" }
+scopeguard = "1.2.0"

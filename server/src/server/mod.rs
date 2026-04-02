@@ -4,6 +4,7 @@ use std::{
     thread,
 };
 
+use scopeguard::defer;
 use scyfi::runtime::Runtime;
 use selia::{
     base_types::{QueryMessage, QueryResponse, Serializable},
@@ -121,6 +122,12 @@ fn handle_client(
                 conn.conn_id
             );
             open_connections.lock().unwrap().push((&conn).into());
+            // Defer removing open connection from open conns channel
+            let c = conn.conn_id;
+            defer! {
+                open_connections.lock().unwrap().retain(|connection| connection.conn_id != c);
+            }
+
             println!("New connection. Open connections: {:?}", open_connections);
             loop {
                 println!(

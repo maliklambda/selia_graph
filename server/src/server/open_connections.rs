@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex, atomic::AtomicU64};
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU64}};
 
 use crate::{connection::Connection, server::legacy::ConnectionId};
 
