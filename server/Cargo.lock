@@ -289,7 +289,7 @@ version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
  "selia",
- "sypher",
+ "sypher 0.1.0 (git+https://github.com/maliklambda/sypher)",
 ]
 
 [[package]]
@@ -360,7 +360,7 @@ dependencies = [
  "scyfi",
  "selia",
  "sha2",
- "sypher",
+ "sypher 0.1.0",
 ]
 
 [[package]]
@@ -388,6 +388,14 @@ dependencies = [
 [[package]]
 name = "sypher"
 version = "0.1.0"
+dependencies = [
+ "uuid",
+]
+
+[[package]]
+name = "sypher"
+version = "0.1.0"
+source = "git+https://github.com/maliklambda/sypher#e88d6178654162429f5e99b14986306755ef0de9"
 dependencies = [
  "uuid",
 ]

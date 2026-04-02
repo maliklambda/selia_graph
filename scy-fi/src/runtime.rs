@@ -6,7 +6,6 @@ use selia::{
 use sypher::parser::{errors::ParseQueryError, query::Query};
 use std::{
     thread::{self, JoinHandle},
-    time::Duration,
 };
 
 use crate::{errors::{HandleError, RuntimeInitError, SpawnWorkerError}, handle::handle_query};
@@ -53,11 +52,17 @@ impl WorkerThread {
         // mock execution of query
         println!("Worker thread #{} is processing: '{query_str}'", self.id);
         let query = Query::from_str(&query_str);
-        let query_tree = sypher::parser::parse_query::parse_query(query).map_err(QueryExecutionError::ParseQueryError)?;
+        let query_tree = match sypher::parser::parse_query::parse_query(query){
+            Ok(qt) => qt,
+            Err(parse_err) => {
+                println!("Error parsing query: {:?}", parse_err);
+                return Err(QueryExecutionError::ParseQueryError(parse_err));
+            }
+        };
         // TODO: select corret DB from self.db_handles (select by dbname)
+        println!("Computing response");
         let response = handle_query(&self.db_handles[0], query_tree).map_err(QueryExecutionError::ExecuteQueryError)?;
-        println!("Received response: {:?}", response);
-        std::thread::sleep(Duration::from_secs(1));
+        println!("Computed response: {:?}", response);
         Ok(QueryResponse::default(&query_str))
     }
 }
@@ -66,6 +71,7 @@ impl WorkerThread {
 pub struct Runtime {
     // worker threads
     pub workers: Vec<JoinHandle<Result<(), QueryExecutionError>>>,
+
     // Max number of workers
     pub max_workers: usize,
 

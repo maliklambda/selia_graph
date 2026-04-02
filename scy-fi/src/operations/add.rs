@@ -3,16 +3,17 @@ use crate::{
     types::{HandleResult, HandleResultResponse},
 };
 use selia::{
-    base_types::{RelationshipId, VertexId},
+    types::type_management::Constraints,
+    base_types::{ID, RelationshipId, VertexId},
     db::db::DB,
-    methods::add_node,
 };
-use sypher::parser::objects::add::{AddNodeQO, AddQO, AddRelationshipQO};
+use sypher::parser::objects::add::{AddNodeQO, AddQO, AddRelationshipQO, AddTypeQO};
 
 #[derive(Debug)]
 pub enum HandleAddResult {
     Node(VertexId),
     Relationship(RelationshipId),
+    Type(ID),
 }
 
 impl From<HandleAddResult> for HandleResultResponse {
@@ -29,6 +30,7 @@ pub fn handle_add_qo(db: &DB, add_qo: AddQO) -> Result<HandleAddResult, HandleEr
         AddQO::Relationship(add_relationship_qo) => {
             handle_add_relationship_qo(db, add_relationship_qo)?
         }
+        AddQO::Type(add_type_qo) => handle_add_type_qo(db, add_type_qo)?,
         AddQO::Index() => todo!("Adding index"),
         AddQO::Properties() => todo!("Adding properties"),
         AddQO::Constraint() => todo!("Adding constraints"),
@@ -53,3 +55,10 @@ fn handle_add_relationship_qo(
 ) -> Result<HandleAddResult, HandleError> {
     todo!()
 }
+
+fn handle_add_type_qo(db: &DB, add_type_qo: AddTypeQO) -> Result<HandleAddResult, HandleError> {
+    let constraints = Constraints {required_fields: vec![]};
+    let type_id = db.add_type(&add_type_qo.type_name, constraints).unwrap();
+    Ok(HandleAddResult::Type(type_id))
+}
+

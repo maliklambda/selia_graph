@@ -20,9 +20,9 @@ fn main() {
             let mut client = Client::from_args(args.to_vec()).unwrap();
             client.connect().unwrap();
 
-            loop {
-                thread::sleep(Duration::from_secs(4));
-                let query = "GET NODE 1";
+            let queries = ["ADD NODE n1 TYPE Person PROPERTIES name = 'Malik';", "GET NODE 0"];
+            for query in queries {
+                thread::sleep(Duration::from_secs(2));
                 println!("Executing query: '{query}'");
                 let query_response = client.execute_query(query).unwrap();
                 println!("Received query response from server: {:?}", query_response);

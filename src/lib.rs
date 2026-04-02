@@ -2,7 +2,7 @@ pub mod methods;
 pub mod db;
 pub mod objects;
 pub mod errors;
-mod types;
+pub mod types;
 pub mod base_types;
 
 mod io;

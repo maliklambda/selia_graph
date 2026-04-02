@@ -1,4 +1,4 @@
-use std::{fmt::Display, sync::mpsc::RecvError};
+use std::fmt::Display;
 
 use selia::{base_types::Serializable, errors::FromBytesError};
 
@@ -164,7 +164,7 @@ pub enum ConnError {
     NoTcpConnection,
     ClientWriteErr,
     ClientReadErr,
-    FailedQueryResponse(RecvError),
+    FailedQueryResponse(crossbeam_channel::RecvError),
     MessageConversion(Box<dyn std::error::Error>),
 }
 

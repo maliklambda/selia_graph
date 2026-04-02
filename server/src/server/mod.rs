@@ -121,7 +121,10 @@ fn handle_client(
                 conn.username.clone().unwrap(),
                 conn.conn_id
             );
+
+            // Push new connection to opened connections
             open_connections.lock().unwrap().push((&conn).into());
+
             // Defer removing open connection from open conns channel
             let c = conn.conn_id;
             defer! {
@@ -290,7 +293,7 @@ fn handle_query(
     // block connection thread until it gets the response from the worker thread.
     // After that, the client thread sends the response back to the client (over the network)
     println!("Client thread {} waiting for response", conn.conn_id);
-    let query_response = conn.response_acceptor.as_mut().unwrap().recv().unwrap();
+    let query_response = conn.response_acceptor.as_mut().unwrap().recv().map_err(ConnError::FailedQueryResponse)?;
     println!("Client thread got response: {:?}", query_response);
 
     Ok(query_response)
