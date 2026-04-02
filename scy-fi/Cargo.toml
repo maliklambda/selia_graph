@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-sypher = { path = "../Sypher" }
 selia = { path = ".." }
+sypher = { git = "https://github.com/maliklambda/sypher" }
 crossbeam-channel = "0.5.15"
