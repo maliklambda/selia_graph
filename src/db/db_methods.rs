@@ -45,6 +45,16 @@ impl DB {
         Ok(new_type_id)
     }
 
+    /// Returns the index score for a certain type.
+    /// Index score == B-Tree height
+    /// The lower the index score, the rarer the element.
+    /// If the type is not indexed, None is returned.
+    pub fn index_score (&self, _type_name: &str) -> Option<u32> {
+        // TODO: check if type is indexed
+        None
+    }
+
+
     pub fn get_type (&self, type_id: TypeID) -> Result <TypeRef, String> {
         let mut lock = self.db.write().map_err(|_| "Failed DB read lock")?;
         lock.f_tp.get_type(type_id)
@@ -53,6 +63,15 @@ impl DB {
     pub fn get_type_full (&self, type_id: TypeID) -> Result <TypeRef, String> {
         let mut lock = self.db.write().map_err(|_| "Failed DB read lock")?;
         lock.f_tp.get_type_full(type_id)
+    }
+
+    pub fn get_type_by_name (&self, type_name: &str) -> Result <(TypeRef, TypeID), String> {
+        let lock = self.db.write().map_err(|_| "Failed DB read lock")?;
+        if let Some((type_ref, type_id)) = lock.f_tp.find_type_name(type_name) {
+            Ok((type_ref, type_id))
+        } else {
+            Err(format!("Type '{type_name}' does not exist."))
+        }
     }
 
     pub fn get_constraints (&self, constraints_info: ConstraintInfo) -> Result <Constraints, String> {

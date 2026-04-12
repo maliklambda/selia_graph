@@ -40,12 +40,13 @@ pub fn handle_add_qo(db: &DB, add_qo: AddQO) -> Result<HandleAddResult, HandleEr
 
 fn handle_add_node_qo(db: &DB, add_node_qo: AddNodeQO) -> Result<HandleAddResult, HandleError> {
     let type_id = {
-        todo!("get type id from typename '{}'", add_node_qo.type_name);
+        let (_, id) = db.get_type_by_name(&add_node_qo.type_name).unwrap();
+        id
     };
-    let properties_str: &str = {
-        todo!("Properties hashmap to str (-> serde)");
+    let properties_str = {
+        serde_json::to_string(&add_node_qo.properties).unwrap()
     };
-    let node_id = db.add_node(type_id, properties_str)?;
+    let node_id = db.add_node(type_id, &properties_str)?;
     Ok(HandleAddResult::Node(node_id))
 }
 

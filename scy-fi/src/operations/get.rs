@@ -28,5 +28,5 @@ pub fn handle_get_qo(db: &DB, get_qo: GetQO) -> Result<HandleGetResult, HandleEr
             HandleGetResult::Relationship(get_relationship(db, rel_id).unwrap())
         }
     };
-    todo!("handle get res: {:?}", res);
+    Ok(res)
 }

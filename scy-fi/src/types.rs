@@ -1,4 +1,4 @@
-use crate::operations::{add::HandleAddResult, get::HandleGetResult};
+use crate::operations::{add::HandleAddResult, get::HandleGetResult, parse_match::HandleMatchResult};
 
 #[derive(Debug)]
 pub struct HandleResultResponse {
@@ -9,4 +9,5 @@ pub struct HandleResultResponse {
 pub enum HandleResult {
     Get(HandleGetResult),
     Add(HandleAddResult),
+    Match(HandleMatchResult),
 }

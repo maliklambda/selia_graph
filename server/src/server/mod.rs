@@ -153,7 +153,6 @@ fn handle_client(
                                 .lock()
                                 .unwrap()
                                 .retain_mut(|connection| connection.conn_id != conn.conn_id);
-                            println!("current conns: {:?}", open_connections);
                         }
                         break;
                     }
