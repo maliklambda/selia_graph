@@ -1,6 +1,9 @@
 # Selia Graph
 
-A database that manages a directed property graph. 
+A modern database that manages a directed property graph. 
+
+![Logo](https://github.com/maliklambda/selia_graph/blob/master/assets/static/selia_graph_logo.png?raw=true)
+
 
 ## About
 
